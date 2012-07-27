@@ -17,7 +17,7 @@ int main (void)
 
 
     while (1) {
-        char *string = s_recv (front);
+        char *string = s_recv(front);
         s_send (back, string);
 		printf("Got %s\n",string);
     }

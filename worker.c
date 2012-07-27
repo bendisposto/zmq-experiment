@@ -2,49 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "zhelpers.h"
+#include "hashmap.c"
+#include "queue.c"
 
 void *context, *front, *back;
 int count = 0;
 
-typedef struct Cell {
-  char *term;
-  struct Cell* next; 
-} tCell;
-
-tCell *first=NULL, *last=NULL;
 
 
-void enqueue(char *addr) {
-	// ignore if in Hashmap 
-	// else add to working queue
-	tCell *new = malloc(sizeof(tCell));
-	new->term = addr;
-	new->next = NULL;
-	
-	if (first == NULL)  first = new; 
-	else 
-		last->next = new;
-		last = new;
-	
-}
-
-char *dequeue() {
-	char *term = first->term;
-	tCell *next = first->next;
-	free(first);
-	first = next;
-	return term;
-}
-
-void print_queue() {
-	printf("Queue: [");
-	tCell *p = first;
-	while (p != NULL) {
-		printf("%s ",p->term);
-		p = p->next;
-	}
-	printf("]\n");
-}
 
 
 void work_hard() {
@@ -53,13 +18,14 @@ void work_hard() {
 	printf("D: %s\n",dequeue());
 	// sync hashmap 
 	// call Prolog code that produces sucessors	
-	sleep(1);
+//	sleep(1);
 }
 
 
 int main (int argc, char *argv [])
 {
-    
+ 
+   
 	context = zmq_init (1);
     front = zmq_socket (context, ZMQ_SUB);
     back = zmq_socket (context, ZMQ_PUSH);
@@ -75,7 +41,7 @@ int main (int argc, char *argv [])
 	enqueue(text);
 	print_queue();
     
-   work_hard();
+    work_hard();
 
 	print_queue();
 

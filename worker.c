@@ -4,28 +4,55 @@
 #include "zhelpers.h"
 #include "hashmap.c"
 #include "queue.c"
+#include "sha.c"
+#include "graph.c"
 
 void *context, *front, *back;
 int count = 0;
 
-
-
-
-
 void work_hard() {
-	// take first from queue
-	printf("D: %s\n",dequeue());
-	printf("D: %s\n",dequeue());
-	// sync hashmap 
-	// call Prolog code that produces sucessors	
-//	sleep(1);
+//	print_queue();
+	char *node = dequeue();
+	
+	char digest[20];
+    sha1(node,digest);
+	
+	if (!contains(digest)) {
+		// call Prolog code that produces sucessors	
+		printf("process %s\n",node);
+		int i;
+		for (i=0;i<N;i++) {
+			char *r = produce_work(node,i);
+			//if (r) printf("enqueue: %s\n",r);
+			if (r) enqueue(r);		
+		}
+
+		put(digest);
+	}
+	else {
+		printf("cache hit %s\n",node);
+	}
+//	print_queue();
 }
 
 
 int main (int argc, char *argv [])
 {
- 
-   
+/*    char digest[20];
+    sha1("1234567890",digest);
+    int o;
+    for (o=0; o<20; o++) {
+        printf("%i ",digest[o]);
+    }
+	printf("\n"); */
+	init_graph();
+	enqueue("some_work_package 0");
+	printf("%i\n",is_empty());
+	while (!is_empty()) {
+	   work_hard();
+    }
+	exit(-4);
+
 	context = zmq_init (1);
     front = zmq_socket (context, ZMQ_SUB);
     back = zmq_socket (context, ZMQ_PUSH);

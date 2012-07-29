@@ -29,6 +29,10 @@ char *dequeue() {
 	return term;
 }
 
+int is_empty() {
+	return (first == NULL);
+}
+
 void print_queue() {
 	printf("Queue: [");
 	tCell *p = first;

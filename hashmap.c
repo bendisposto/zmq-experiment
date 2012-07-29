@@ -1,26 +1,37 @@
 #include <stdio.h>
 #include <string.h>
 
-char a[524288][20];
+#define HASHSIZE 524288
+char a[HASHSIZE][20];
 
 int find(int index, int jump, int orgi, int org, char key[20]) {
-	//printf("get %s %d\n",key,index);
+//	printf("get %d %d\n",index,jump);
+	if (index<0) index = HASHSIZE-index;
+    index = index % HASHSIZE;
+//	printf("get %d %d\n",index,jump);
 	if (!(org) && orgi==index)  { exit(-1); }
 	else { org = 0; }
+	char *x = a[index];
+//	int o; for(o=0;o<20;o++) printf("%d ",x[o]); printf("\n");
 	if (strncmp(a[index],"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",20)==0) return 0;
 	if (strncmp(a[index],key,20)==0) return 1;
-	return find((index+jump) % 524288,jump,orgi,org,key);
+	return find((index+jump),jump,orgi,org,key);
 }
 
 
 int contains(char key[20]) {
-	int index = (key[0]*256*256 + 256 * key[1] + (key[2] & 224))/32;
+//	printf("contains\n");
+	int index = ((key[0]*256*256 + 256 * key[1] + (key[2] & 224))/32);
 	int jump = ((key[3]+256*key[4]) | 1);
-
+    if (jump<0) jump = -jump;
 	return find(index,jump,index,1,key);
 }
 
-int write(int index, int jump, int orgi, int org, char key[20]) {
+int write_hm(int index, int jump, int orgi, int org, char key[20]) {
+//	printf("put %d %d\n",index,jump);
+	if (index<0) index = HASHSIZE-index;
+	index = index % HASHSIZE;
+//  printf("put %d %d\n",index,jump);
 	//printf("put %s %d\n",key,index);
 	if (!(org) && orgi==index)  { exit(-1); }
 	else { org = 0; }
@@ -30,7 +41,7 @@ int write(int index, int jump, int orgi, int org, char key[20]) {
 	}
 	else {
 	  if (strncmp(a[index],key,20)!=0)  {
-		return write((index+jump) % 524288,jump,orgi,org,key);
+		return write_hm((index+jump) % HASHSIZE,jump,orgi,org,key);
 	  }
 	  else {
 		return 1;
@@ -39,9 +50,11 @@ int write(int index, int jump, int orgi, int org, char key[20]) {
 }
 
 int put(char key[20]) {
-	int index = (key[0]*256*256 + 256 * key[1] + (key[2] & 224))/32;	
+//	printf("put\n");
+	int index = ((key[0]*256*256 + 256 * key[1] + (key[2] & 224))/32) ;
 	int jump = ((key[3]+256*key[4]) | 1);
-	write(index,jump,index,1,key);	
+	if (jump<0) jump = -jump;
+	write_hm(index,jump,index,1,key);	
 }
 
 /*

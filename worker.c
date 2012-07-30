@@ -10,6 +10,11 @@
 void *context, *front, *back;
 int count = 0;
 
+void found_new_hash(char* digest) {
+	put(digest);
+	s_send (back, digest);
+}
+
 void work_hard() {
 //	print_queue();
 	char *node = dequeue();
@@ -26,8 +31,7 @@ void work_hard() {
 			//if (r) printf("enqueue: %s\n",r);
 			if (r) enqueue(r);		
 		}
-
-		put(digest);
+		found_new_hash(digest);
 	}
 	else {
 		printf("cache hit %s\n",node);
@@ -36,23 +40,9 @@ void work_hard() {
 }
 
 
-int main (int argc, char *argv [])
-{
-/*    char digest[20];
-    sha1("1234567890",digest);
-    int o;
-    for (o=0; o<20; o++) {
-        printf("%i ",digest[o]);
-    }
-	printf("\n"); */
-	init_graph();
-	enqueue("some_work_package 0");
-	printf("%i\n",is_empty());
-	while (!is_empty()) {
-	   work_hard();
-    }
-	exit(-4);
+int main (int argc, char *argv []) {
 
+	init_graph();
 	context = zmq_init (1);
     front = zmq_socket (context, ZMQ_SUB);
     back = zmq_socket (context, ZMQ_PUSH);
@@ -62,15 +52,10 @@ int main (int argc, char *argv [])
     zmq_connect (back, "tcp://localhost:5557");
  //   zmq_bind (back, "ipc://hash_distribution.ipc");
 
-    char *text =  (argc > 1)? argv [1]: "apfelkompott";
-
-	enqueue(text);
-	enqueue(text);
-	print_queue();
-    
-    work_hard();
-
-	print_queue();
+	enqueue("some_work_package 0");
+	while (!is_empty()) {
+	   work_hard();
+    }
 
     zmq_close (back);
     zmq_close (front);

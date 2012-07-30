@@ -1,7 +1,12 @@
 #include <zmq.h>
 #include <stdio.h>
 #include <string.h>
-#include "zhelpers.h"
+#include "mqhelper.c"
+
+void print_key(char key[20]) {
+	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
+}
+
 
 int main (void)
 {
@@ -17,9 +22,11 @@ int main (void)
 
 
     while (1) {
-        char *string = s_recv(front);
-        s_send (back, string);
-		printf("Got %s\n",string);
+        char *string = recv_digest(front);
+//		print_key(string);
+//		printf(" %s\n",string);
+        send_digest (back, string);
+
     }
 
     zmq_close (back);

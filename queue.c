@@ -8,7 +8,10 @@ typedef struct Cell {
 
 tCell *first=NULL, *last=NULL;
 
+int c = 0;
+
 void enqueue(char *addr) {
+	c++;
 	// ignore if in Hashmap 
 	// else add to working queue
 	tCell *new = malloc(sizeof(tCell));
@@ -22,6 +25,7 @@ void enqueue(char *addr) {
 }
 
 char *dequeue() {
+	c--;
 	char *term = first->term;
 	tCell *next = first->next;
 	free(first);
@@ -32,6 +36,11 @@ char *dequeue() {
 int is_empty() {
 	return (first == NULL);
 }
+
+int q_size() {
+	return c;
+}
+
 
 void print_queue() {
 	printf("Queue: [");

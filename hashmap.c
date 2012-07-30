@@ -4,15 +4,21 @@
 #define HASHSIZE 524288
 char a[HASHSIZE][20];
 
+void print_key(char key[20]) {
+	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
+}
+
 int find(int index, int jump, int orgi, int org, char key[20]) {
-//	printf("get %d %d\n",index,jump);
+//	printf("get ");
+//	print_key(key);
+//	printf("\nget %d %d\n",index,jump);
 	if (index<0) index = HASHSIZE-index;
     index = index % HASHSIZE;
 //	printf("get %d %d\n",index,jump);
 	if (!(org) && orgi==index)  { exit(-1); }
 	else { org = 0; }
 	char *x = a[index];
-//	int o; for(o=0;o<20;o++) printf("%d ",x[o]); printf("\n");
+
 	if (strncmp(a[index],"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",20)==0) return 0;
 	if (strncmp(a[index],key,20)==0) return 1;
 	return find((index+jump),jump,orgi,org,key);
@@ -28,7 +34,9 @@ int contains(char key[20]) {
 }
 
 int write_hm(int index, int jump, int orgi, int org, char key[20]) {
-//	printf("put %d %d\n",index,jump);
+//	printf("put ");
+//	print_key(key);
+//	printf("\nput %d %d\n",index,jump);
 	if (index<0) index = HASHSIZE-index;
 	index = index % HASHSIZE;
 //  printf("put %d %d\n",index,jump);

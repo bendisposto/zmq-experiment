@@ -2,8 +2,8 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	10
-#define DENSITY 50
+#define N	1000
+#define DENSITY 2
 
 char *vertex[N][20];
 int **matrix[N][N];

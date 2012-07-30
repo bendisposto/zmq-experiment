@@ -3,8 +3,8 @@
 #include <string.h>
 #include "mqhelper.c"
 
-void print_key(char key[20]) {
-	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
+void print_key(char key[21]) {
+	int o; for(o=0;o<21;o++) printf("%d ",key[o]);
 }
 
 
@@ -24,8 +24,9 @@ int main (void)
     while (1) {
         char *string = recv_digest(front);
 //		print_key(string);
+// printf("\n");
 //		printf(" %s\n",string);
-        send_digest (back, string);
+        forward (back, string);
 
     }
 

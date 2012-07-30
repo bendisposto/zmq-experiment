@@ -12,35 +12,45 @@ void *context, *front, *back;
 int count = 0;
 
 
+
 void update_hashes() {
-	char *z = recv_digest_async(front);
-	if (z!=NULL) put(z);
+	char *z;
+	while((z = recv_digest_async(front)) != NULL) {
+		put(z);
+	}
 }
 
 void work_hard() {
-	count++;
+
 	update_hashes();
+	printf("%d  %d\n",count,count_elements());
 
-	char *node = dequeue();
-//  printf("dequeued %s\n",node);
+	char *node = "";
+	char *digest = "";
+	dequeue(&node,&digest);
 
-	char digest[20];
-    sha1(node,digest);
+//	printf("process: %s...",node);
+
 	
-	if (!contains(digest)) {
+	if (!contains_processed(digest)) {
 		int i;
 		for (i=0;i<N;i++) {
 			char *r = produce_work(node,i);
 			if (r) { 
-				char d[20];
+				char *d = malloc(20);
 			    sha1(r,d);
-			    if (!contains(d)) enqueue(r); 
+			    if (!contains(d)) { 
+				 enqueue(r,d); 
+			 	 send_digest_queued(back,d);
+				}
 			}		
 		}
-		send_digest (back, digest);
+//		printf("done\n");
+
+		send_digest_processed(back, digest);
 	}
 	else {
-//		printf("cache hit %s\n",node);
+//		printf("cache hit\n");
 	}
 //	printf("%d\n",q_size());
 //	print_queue();
@@ -68,11 +78,19 @@ int main (int argc, char *argv []) {
 	zmq_setsockopt (front, ZMQ_SUBSCRIBE, filter, strlen (filter));
 
 	printf("starting\n");
-	enqueue("some_work_package 1");
+	
+
+	char *root = "some_work_package 0";	
+	char digest[20];
+    sha1(root,digest);
+
+	enqueue(root,digest);
+
 	while (!is_empty()) {
 	   work_hard();
+		count++;
     }
-	printf("%d\n",count);
+	printf("%d  %d\n",count,count_elements());
 
     zmq_close (back);
     zmq_close (front);

@@ -7,35 +7,41 @@
 #include "graph.c"
 #include "zhelpers.h"
 #include "mqhelper.c"
+#include <unistd.h>
+#include <pthread.h>
 
 void *context, *front, *back;
 int count = 0;
-
+int hit=0, cache=0;
 
 
 void update_hashes() {
-	char *z;
-	while((z = recv_digest_async(front)) != NULL) {
-		put(z);
+	while(1) {
+		char *z = recv_digest(front);
+//		printf("%i ",z[20]);
+		if (z != NULL) put(z);
 	}
 }
 
 void work_hard() {
 
-	update_hashes();
-	printf("%d  %d\n",count,count_elements());
-
+//	printf("%d %d %d\n",count,count_elements(),q_size());
 	char *node = "";
 	char *digest = "";
 	dequeue(&node,&digest);
 
-//	printf("process: %s...",node);
+//	printf("process: %s ...",node);
 
 	
 	if (!contains_processed(digest)) {
+		hit++;
 		int i;
+
+		int l = atoi(node);
+
 		for (i=0;i<N;i++) {
-			char *r = produce_work(node,i);
+			char *r = produce_work(l,i);
+
 			if (r) { 
 				char *d = malloc(20);
 			    sha1(r,d);
@@ -46,10 +52,10 @@ void work_hard() {
 			}		
 		}
 //		printf("done\n");
-
 		send_digest_processed(back, digest);
 	}
 	else {
+		cache++;
 //		printf("cache hit\n");
 	}
 //	printf("%d\n",q_size());
@@ -77,10 +83,14 @@ int main (int argc, char *argv []) {
 	char *filter = "";
 	zmq_setsockopt (front, ZMQ_SUBSCRIBE, filter, strlen (filter));
 
+    pthread_t worker;
+    int rc = pthread_create (&worker, NULL, update_hashes, (void*) &context);
+
+
 	printf("starting\n");
 	
 
-	char *root = "some_work_package 0";	
+	char *root = "0";	
 	char digest[20];
     sha1(root,digest);
 
@@ -91,6 +101,7 @@ int main (int argc, char *argv []) {
 		count++;
     }
 	printf("%d  %d\n",count,count_elements());
+	printf("Hit: %d Cache: %d\n",hit,cache);
 
     zmq_close (back);
     zmq_close (front);

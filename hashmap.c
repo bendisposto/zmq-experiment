@@ -26,7 +26,7 @@ int occupied(char key[21],int index) {
 }
 
 int index_of(char key[21]) {
-	int i=0,p;
+	int i=0,p=0;
 	while(1) {
 		p=ith_index_of(key,i++);
 		if (!occupied(key, p)) break;
@@ -42,8 +42,8 @@ int contains(char key[21]) {
 
 int contains_processed(char key[21]) {
 	int p = index_of(key);
-//	printf("pos: %i\n",p);
-	int result;
+//	printf("pos: %i ",p);
+	int result = 0;
 	if (memcmp(a[p],"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",20)==0) result = 0;
 	if (memcmp(a[p],key,20)==0 && a[p][20] == 1) result = 1;
 //	printf("r: %d\n",result);

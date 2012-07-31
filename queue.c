@@ -65,10 +65,11 @@ int q_size() {
 void print_queue() {
 	printf("Queue: [");
 	tCell *p = first;
+//	if (first != NULL) printf("%s %i | ", first->term, c);
 	while (p != NULL) {
 		printf("%s ",p->term);
-		print_key(p->digest);
-		printf("\n");
+//		print_key(p->digest);
+//		printf("\n");
 		p = p->next;
 	}
 	printf("]\n");

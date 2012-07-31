@@ -2,10 +2,9 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	3000
+#define N	10000
 #define DENSITY 10
 
-char *vertex[N][20];
 int **matrix[N][N];
 
 void print_matrix() {
@@ -18,22 +17,10 @@ void print_matrix() {
 	}
 }
 
-
-
-void print_vertices() {
-	int i;
-	for (i=0;i<N;i++) {
-		printf("%s ",vertex[i]);
-	}	
-	printf("\n");
-}
-
 void init_graph(void) {
 	srand((int)time(NULL));
 	int i,j;
-	for (i=0;i<N;i++) {
-		sprintf(vertex[i],"some_work_package %i",i);
-	}
+
 	for (i=0;i<N;i++) {
 		for (j=0;j<i;j++) {
 			int e = rand() % 100;
@@ -44,31 +31,14 @@ void init_graph(void) {
 	}
 }
 
-char *produce_work(char *input, int k) {
-	int i,n;
-	for(i=0;i<N;i++) {
-		char *v = vertex[i];
-//		printf("%i %i %s\n",i,strlen(input),v);
-		if (strncmp(v,input,strlen(input))==0) n=i;
-	}	
-   if(matrix[n][k]==1) return vertex[k]; 
-   return NULL;
+char *produce_work(int i, int j) {
+//	printf("looking at %i %i %i\n",i,j,matrix[i][j]);
+      if(matrix[i][j]==1) {
+		char *result=malloc(10);
+  	    sprintf(result,"%i",j);
+        return result; }
+		return NULL;
 }
 
 
 
-
-/*
-void main() {
-	srand((int)time(NULL));
-	init_graph();
-	print_vertices();
-	print_matrix();
-	int i;
-	for(i=0;i<N;i++) {
-		char *r = produce_work(1,i);
-		if (r) printf("%s\n",r);
-	}
-	printf("%i\n",size());
-}
-*/

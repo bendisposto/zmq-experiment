@@ -2,8 +2,9 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	10000
-#define DENSITY 10
+#define N	10001
+#define DENSITY 100
+
 
 int **matrix[N][N];
 
@@ -20,7 +21,6 @@ void print_matrix() {
 void init_graph(void) {
 	srand((int)time(NULL));
 	int i,j;
-
 	for (i=0;i<N;i++) {
 		for (j=0;j<i;j++) {
 			int e = rand() % 100;

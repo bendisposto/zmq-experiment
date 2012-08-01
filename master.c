@@ -2,11 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "mqhelper.c"
+#include "hashmap.c"
 
-void print_key(char key[21]) {
-	int o; for(o=0;o<21;o++) printf("%d ",key[o]);
-}
-
+int messages = 0;
 
 int main (void)
 {
@@ -23,11 +21,10 @@ int main (void)
 
     while (1) {
         char *string = recv_digest(front);
-//		print_key(string);
-// printf("\n");
-//		printf(" %s\n",string);
+		messages++;
+		put(string);
         forward (back, string);
-
+		if (messages%1000==0) printf ("%d\n",messages);
     }
 
     zmq_close (back);

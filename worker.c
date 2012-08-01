@@ -9,10 +9,12 @@
 #include "mqhelper.c"
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 
 void *context, *front, *back;
 int count = 0;
 int hit=0, cache=0;
+clock_t start, finish;
 
 
 void update_hashes() {
@@ -22,6 +24,14 @@ void update_hashes() {
 		if (z != NULL) put(z);
 	}
 }
+
+void print_stats() {
+	while(1) {
+		printf("Queue: %i\n",q_size());
+		sleep(5);
+	}
+}
+
 
 void work_hard() {
 
@@ -51,7 +61,7 @@ void work_hard() {
 				}
 			}		
 		}
-//		printf("done\n");
+//		printf("%s done\n",node);
 		send_digest_processed(back, digest);
 	}
 	else {
@@ -65,20 +75,22 @@ void work_hard() {
 
 int main (int argc, char *argv []) {
 
+
 	init_graph();
-	context = zmq_init (1);
 	
 
-    back = zmq_socket (context, ZMQ_PUSH);
+	context = zmq_init (1); 
+	
+	back = zmq_socket (context, ZMQ_PUSH);
 
-//    zmq_connect (back, "tcp://localhost:5557");
-    zmq_connect (back, "ipc://hash_collect.ipc");
+    zmq_connect (back, "tcp://localhost:5557");
+//    zmq_connect (back, "ipc://hash_collect.ipc");
 
  //   zmq_bind (back, "ipc://hash_distribution.ipc");
 
     front = zmq_socket (context, ZMQ_SUB);
-//    zmq_connect (front, "tcp://localhost:5556");
-    zmq_connect (front, "ipc://hash_distribution.ipc");
+    zmq_connect (front, "tcp://localhost:5556");
+//    zmq_connect (front, "ipc://hash_distribution.ipc");
 
 	char *filter = "";
 	zmq_setsockopt (front, ZMQ_SUBSCRIBE, filter, strlen (filter));
@@ -86,25 +98,37 @@ int main (int argc, char *argv []) {
     pthread_t worker;
     int rc = pthread_create (&worker, NULL, update_hashes, (void*) &context);
 
+    pthread_t stats;
+    int sc = pthread_create (&worker, NULL, print_stats, NULL);
+
 
 	printf("starting\n");
 	
 
-	char *root = "0";	
+	char *root = "0";
+	
+	if (argc>0) root = argv[0];
+	
+	
+		
 	char digest[20];
     sha1(root,digest);
 
 	enqueue(root,digest);
 
 	while (!is_empty()) {
+
 	   work_hard();
+
 		count++;
     }
 	printf("%d  %d\n",count,count_elements());
 	printf("Hit: %d Cache: %d\n",hit,cache);
-
+//	sleep(2); // Allow receiver to get all messages
+		
     zmq_close (back);
     zmq_close (front);
     zmq_term (context);
+
     return 0;
 }

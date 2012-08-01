@@ -35,39 +35,49 @@ void print_stats() {
 
 void work_hard() {
 
-//	printf("%d %d %d\n",count,count_elements(),q_size());
-	char *node = "";
-	char *digest = "";
-	dequeue(&node,&digest);
+	//printf("%d %d %d\n",count,count_elements(),q_size());
+	tCell *t = dequeue();
 
+	assert(t->term != NULL);
+	assert(t->digest != NULL);
 //	printf("process: %s ...",node);
 
 	
-	if (!contains_processed(digest)) {
+	if (!contains_processed(t->digest)) {
 		hit++;
 		int i;
 
-		int l = atoi(node);
+		int l = atoi(t->term);
 
 		for (i=0;i<N;i++) {
-			char *r = produce_work(l,i);
-
-			if (r) { 
+			if (produce_work(l,i)) { 
+				char *r = malloc(10);
+				sprintf(r,"%d",i);
 				char *d = malloc(20);
 			    sha1(r,d);
 			    if (!contains(d)) { 
 				 enqueue(r,d); 
 			 	 send_digest_queued(back,d);
 				}
+				else {
+					free(r);
+					free(d);
+				}
 			}		
 		}
 //		printf("%s done\n",node);
-		send_digest_processed(back, digest);
+		send_digest_processed(back, t->digest);
+		free(t->term);
+		free(t->digest);
+		free(t);
 	}
 	else {
 		cache++;
 //		printf("cache hit\n");
 	}
+	
+
+	
 //	printf("%d\n",q_size());
 //	print_queue();
 }
@@ -101,17 +111,18 @@ int main (int argc, char *argv []) {
     pthread_t stats;
     int sc = pthread_create (&worker, NULL, print_stats, NULL);
 
-
+    
 	printf("starting\n");
 	
 
-	char *root = "0";
+	char *root = malloc(2);
+	memcpy(root,"0",2);
 	
-	if (argc>0) root = argv[0];
+	if (argc > 1) root = argv[1];
 	
 	
 		
-	char digest[20];
+	char *digest = malloc(20);
     sha1(root,digest);
 
 	enqueue(root,digest);

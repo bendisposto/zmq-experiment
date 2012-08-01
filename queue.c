@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 typedef struct Cell {
   char *term;
   char *digest;
@@ -44,13 +45,12 @@ void enqueue_lifo(char *term, char digest[20]) {
 }
 
 
-void dequeue(char **term, char **digest) {
+tCell *dequeue() {
 	c--;
-    *term = first->term;
-	*digest = first->digest;
-	tCell *next = first->next;
-	free(first);
-	first = next;
+	tCell *res = first;
+	first = first->next;
+	res->next = NULL;
+	return res;
 }
 
 int is_empty() {

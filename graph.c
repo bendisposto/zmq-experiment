@@ -2,8 +2,8 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	10001
-#define DENSITY 100
+#define N	10000
+#define DENSITY 2
 
 
 int **matrix[N][N];
@@ -31,13 +31,9 @@ void init_graph(void) {
 	}
 }
 
-char *produce_work(int i, int j) {
+int produce_work(int i, int j) {
 //	printf("looking at %i %i %i\n",i,j,matrix[i][j]);
-      if(matrix[i][j]==1) {
-		char *result=malloc(10);
-  	    sprintf(result,"%i",j);
-        return result; }
-		return NULL;
+      return matrix[i][j];
 }
 
 

@@ -3,3 +3,5 @@ listener
 master
 worker
 hash
+*.ipc
+out

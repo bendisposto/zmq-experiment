@@ -4,7 +4,7 @@
 #define HASHSIZE 524288
 #define ENTRY 21
 
-char a[HASHSIZE][ENTRY];
+static char a[HASHSIZE][ENTRY];
 
 void print_key(char key[20]) {
 	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
@@ -51,10 +51,20 @@ int contains_processed(char key[21]) {
 	return result;
 }
 
-void put(char key[21]) { // yes, 21 is correct
+void put_local(char key[20]) { // yes, 21 is correct
 	int p = index_of(key);
-	memcpy (a[p], key, 21);
+	memcpy (a[p], key, 20);
+	a[p][20] = 0;
 }
+
+void put(char key[21]) { // yes, 21 is correct
+	char kk[21];
+	memcpy (kk, key+1, 20);
+	memcpy (kk+20, key, 1);
+    int p = index_of(kk);
+	memcpy (a[p], kk, 21);
+}
+
 
 int count_elements() {
 	int c =0 ;
@@ -65,6 +75,7 @@ int count_elements() {
 	printf("S: %i\n",i);
 	return c;
 }
+
 
 /*
 int main(void) {

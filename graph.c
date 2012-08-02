@@ -2,8 +2,8 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	1000
-#define DENSITY 2
+#define N	10000
+#define DENSITY 100
 
 
 int matrix[N][N];

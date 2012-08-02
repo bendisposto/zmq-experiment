@@ -16,18 +16,26 @@ int count = 0;
 int hit=0, cache=0;
 clock_t start, finish;
 
+volatile int running = 1;
+
 
 void *update_hashes(void *arg) {
-	while(1) {
-		char *z = recv_digest(front);
-//		printf("%i ",z[20]);
-		if (z != NULL) put(z);
+	while(running) {
+		char *z = s_recv(front);
+		if (z != NULL) {
+			if (z[0]<2) {
+				put(z);
+			}
+			else {
+				printf("Received Message for Worker %i",z[0]);
+			}
+		};
 		free(z);
 	}
 }
 
 void *print_stats(void *arg) {
-	while(1) {
+	while(running) {
 		printf("Queue: %i\n",q_size());
 		sleep(5);
 	}
@@ -57,6 +65,7 @@ void work_hard() {
 				char *d = malloc(20);
 			    sha1(r,d);
 			    if (!contains(d)) { 
+//				 put_local(d);
 				 enqueue(r,d); 
 			 	 send_digest_queued(back,d);
 				}
@@ -134,10 +143,11 @@ int main (int argc, char *argv []) {
 
 		count++;
     }
+	running = 0;
 	printf("%d  %d\n",count,count_elements());
 	printf("Hit: %d Cache: %d\n",hit,cache);
-//	sleep(2); // Allow receiver to get all messages
-		
+	
+	
     zmq_close (back);
     zmq_close (front);
     zmq_term (context);

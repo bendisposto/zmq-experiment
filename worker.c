@@ -32,6 +32,7 @@ void *update_hashes(void *arg) {
 		};
 		free(z);
 	}
+	return 0;
 }
 
 void *print_stats(void *arg) {
@@ -39,6 +40,7 @@ void *print_stats(void *arg) {
 		printf("Queue: %i\n",q_size());
 		sleep(5);
 	}
+	return 0;
 }
 
 
@@ -116,10 +118,10 @@ int main (int argc, char *argv []) {
 	zmq_setsockopt (front, ZMQ_SUBSCRIBE, filter, strlen (filter));
 
     pthread_t worker;
-    int rc = pthread_create (&worker, NULL, update_hashes, (void*) &context);
+    pthread_create (&worker, NULL, update_hashes, (void*) &context);
 
     pthread_t stats;
-    int sc = pthread_create (&worker, NULL, print_stats, NULL);
+    pthread_create (&stats, NULL, print_stats, NULL);
 
     
 	printf("starting\n");

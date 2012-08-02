@@ -10,7 +10,7 @@ void print_key(char key[20]) {
 	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
 }
 
-int ith_index_of(char key[21], int i) {
+int ith_index_of(char key[20], int i) {
 	int index = ((key[0]*256*256 + 256 * key[1] + (key[2] & 224))/32);
 	int jump = ((key[3]+256*key[4]) | 1);
     if (jump<0) jump = -jump;
@@ -25,7 +25,7 @@ int occupied(char key[21],int index) {
 	return 1;
 }
 
-int index_of(char key[21]) {
+int index_of(char key[20]) {
 	int i=0,p=0;
 	while(1) {
 		p=ith_index_of(key,i++);
@@ -58,11 +58,9 @@ void put_local(char key[20]) { // yes, 21 is correct
 }
 
 void put(char key[21]) { // yes, 21 is correct
-	char kk[21];
-	memcpy (kk, key+1, 20);
-	memcpy (kk+20, key, 1);
-    int p = index_of(kk);
-	memcpy (a[p], kk, 21);
+    int p = index_of(key+1);
+	memcpy (a[p], key+1, 20);
+	a[p][20] = key[0];
 }
 
 

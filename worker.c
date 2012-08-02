@@ -17,15 +17,16 @@ int hit=0, cache=0;
 clock_t start, finish;
 
 
-void update_hashes() {
+void *update_hashes(void *arg) {
 	while(1) {
 		char *z = recv_digest(front);
 //		printf("%i ",z[20]);
 		if (z != NULL) put(z);
+		free(z);
 	}
 }
 
-void print_stats() {
+void *print_stats(void *arg) {
 	while(1) {
 		printf("Queue: %i\n",q_size());
 		sleep(5);
@@ -67,15 +68,15 @@ void work_hard() {
 		}
 //		printf("%s done\n",node);
 		send_digest_processed(back, t->digest);
-		free(t->term);
-		free(t->digest);
-		free(t);
 	}
 	else {
 		cache++;
 //		printf("cache hit\n");
 	}
 	
+	free(t->term);
+	free(t->digest);
+	free(t);
 
 	
 //	printf("%d\n",q_size());

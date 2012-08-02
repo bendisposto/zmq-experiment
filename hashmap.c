@@ -38,6 +38,7 @@ int contains(char key[21]) {
 	int p = index_of(key);
 	if (memcmp(a[p],"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",20)==0) return 0;
 	if (memcmp(a[p],key,20)==0) return 1;
+	return 0;
 }
 
 int contains_processed(char key[21]) {
@@ -50,7 +51,7 @@ int contains_processed(char key[21]) {
 	return result;
 }
 
-int put(char key[21]) { // yes, 21 is correct
+void put(char key[21]) { // yes, 21 is correct
 	int p = index_of(key);
 	memcpy (a[p], key, 21);
 }

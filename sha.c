@@ -44,8 +44,8 @@ effort (for example the reengineering of a great many Capstone chips).
 void sha1(char* input, char* digest) {
 	struct sha_ctx ctx;
 	sha_init(&ctx);
-	sha_update(&ctx,input,strlen(input));
-	sha_final(digest,&ctx);
+	sha_update(&ctx,(uint8_t*)input,strlen(input));
+	sha_final((uint8_t*)digest,&ctx);
 }
 
 

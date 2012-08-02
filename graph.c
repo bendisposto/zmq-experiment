@@ -2,11 +2,11 @@
 #include<stdlib.h>
 #include<time.h>
 
-#define N	10000
+#define N	1000
 #define DENSITY 2
 
 
-int **matrix[N][N];
+int matrix[N][N];
 
 void print_matrix() {
 	int i,j;

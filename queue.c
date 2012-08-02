@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 
 typedef struct Cell {
   char *term;
@@ -11,6 +11,9 @@ typedef struct Cell {
 tCell *first=NULL, *last=NULL;
 
 int c = 0;
+
+void enqueue_fifo(char *term, char digest[20]);
+
 
 void enqueue(char *term, char digest[20]) {
 	enqueue_fifo(term,digest);

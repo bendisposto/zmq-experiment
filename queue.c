@@ -30,10 +30,13 @@ void enqueue_fifo(char *term, char digest[20]){
 	
 //	printf("queued: %s %s\n",term,digest);
 	
+
+	
 	if (first == NULL)  first = new; 
 	else 
-		last->next = new;
+		tCell *temp = last; // for multithreading
 		last = new;
+		temp->next = new; 
 }
 
 void enqueue_lifo(char *term, char digest[20]) {

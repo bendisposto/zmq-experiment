@@ -4,6 +4,7 @@
 #include <string.h>
 #include "mqhelper.c"
 #include "hashmap.c"
+#include "zhelpers.h"
 
 int messages = 0;
 

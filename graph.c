@@ -3,7 +3,7 @@
 #include<time.h>
 
 #define N	10000
-#define DENSITY 100
+#define DENSITY 1
 
 
 int matrix[N][N];

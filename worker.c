@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <time.h>
 
-void *context, *front, *back;
+void *context, *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl;
 int count = 0;
 int hit=0, cache=0;
 clock_t start, finish;
@@ -21,7 +21,7 @@ volatile int running = 1;
 
 void *update_hashes(void *arg) {
 	while(running) {
-		char *z = s_recv(front);
+		char *z = s_recv(recv_hashes);
 		if (z != NULL) {
 			if (z[0]<2) {
 				put(z);
@@ -43,15 +43,43 @@ void *print_stats(void *arg) {
 	return 0;
 }
 
+void receive_work() {
+    zmq_msg_t message;
+	zmq_msg_init (&message);
+	printf("Waiting for work\n");
+	zmq_recv (recv_ctrl, &message, 0); 
+    int size = zmq_msg_size (&message);
+	char *data = zmq_msg_data (&message);
+	printf("continuing\n");
+
+	char *term = malloc(size-20);
+	char *digest = malloc(20);
+    memcpy (term, data+20, size-20);
+    memcpy (digest, data, 20);	
+	enqueue(term,digest);
+    zmq_msg_close (&message);
+    zmq_msg_t reply;
+    zmq_msg_init_size (&reply, 3);
+    memcpy (zmq_msg_data (&reply), "ok", 3);
+    zmq_send (recv_ctrl, &reply, 0);
+    zmq_msg_close (&reply);
+}
+
 
 void work_hard() {
 
+	
+
+if (is_empty()) { receive_work(); }
+	
+assert(!is_empty());
+	
 	//printf("%d %d %d\n",count,count_elements(),q_size());
 	tCell *t = dequeue();
 
 	assert(t->term != NULL);
 	assert(t->digest != NULL);
-//	printf("process: %s ...",node);
+//	printf("process: %s ...",t->term);
 
 	
 	if (!contains_processed(t->digest)) {
@@ -69,7 +97,7 @@ void work_hard() {
 			    if (!contains(d)) { 
 //				 put_local(d);
 				 enqueue(r,d); 
-			 	 send_digest_queued(back,d);
+			 	 send_digest_queued(send_hashes,d);
 				}
 				else {
 					free(r);
@@ -78,7 +106,7 @@ void work_hard() {
 			}		
 		}
 //		printf("%s done\n",node);
-		send_digest_processed(back, t->digest);
+		send_digest_processed(send_hashes, t->digest);
 	}
 	else {
 		cache++;
@@ -89,6 +117,7 @@ void work_hard() {
 	free(t->digest);
 	free(t);
 
+
 	
 //	printf("%d\n",q_size());
 //	print_queue();
@@ -96,26 +125,25 @@ void work_hard() {
 
 
 int main (int argc, char *argv []) {
-
-
 	init_graph();
-	
 
 	context = zmq_init (1); 
 	
-	back = zmq_socket (context, ZMQ_PUSH);
+	send_hashes = zmq_socket (context, ZMQ_PUSH);
 
-    zmq_connect (back, "tcp://localhost:5557");
-//    zmq_connect (back, "ipc://hash_collect.ipc");
+    zmq_connect (send_hashes, "tcp://localhost:5557");
 
- //   zmq_bind (back, "ipc://hash_distribution.ipc");
+    recv_hashes = zmq_socket (context, ZMQ_SUB);
+    zmq_connect (recv_hashes, "tcp://localhost:5556");
 
-    front = zmq_socket (context, ZMQ_SUB);
-    zmq_connect (front, "tcp://localhost:5556");
-//    zmq_connect (front, "ipc://hash_distribution.ipc");
+	recv_ctrl = zmq_socket (context, ZMQ_REP);
+	int port = zmq_bind(recv_ctrl, "tcp://*:4567");
+	
+	printf("port: %i\n",port);
+
 
 	char *filter = "";
-	zmq_setsockopt (front, ZMQ_SUBSCRIBE, filter, strlen (filter));
+	zmq_setsockopt (recv_hashes, ZMQ_SUBSCRIBE, filter, strlen (filter));
 
     pthread_t worker;
     pthread_create (&worker, NULL, update_hashes, (void*) &context);
@@ -127,22 +155,13 @@ int main (int argc, char *argv []) {
 	printf("starting\n");
 	
 
-	char *root = malloc(2);
-	memcpy(root,"0",2);
-	
-	if (argc > 1) root = argv[1];
-	
-	
-		
-	char *digest = malloc(20);
-    sha1(root,digest);
 
-	enqueue(root,digest);
 
-	while (!is_empty()) {
-
+//	enqueue(root,digest);
+// 
+   
+	while (1) {
 	   work_hard();
-
 		count++;
     }
 	running = 0;
@@ -150,8 +169,8 @@ int main (int argc, char *argv []) {
 	printf("Hit: %d Cache: %d\n",hit,cache);
 	
 	
-    zmq_close (back);
-    zmq_close (front);
+    zmq_close (send_hashes);
+    zmq_close (recv_hashes);
     zmq_term (context);
 
     return 0;

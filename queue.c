@@ -32,11 +32,16 @@ void enqueue_fifo(char *term, char digest[20]){
 	
 
 	
-	if (first == NULL)  first = new; 
-	else 
+	if (first == NULL) { first = new; 
+		last = new;
+		first->next = NULL;
+	}
+	else { 
 		tCell *temp = last; // for multithreading
 		last = new;
-		temp->next = new; 
+		temp->next = new;
+	 }
+
 }
 
 void enqueue_lifo(char *term, char digest[20]) {
@@ -50,11 +55,11 @@ void enqueue_lifo(char *term, char digest[20]) {
 	first = new; 
 }
 
-
 tCell *dequeue() {
 	c--;
 	tCell *res = first;
 	first = first->next;
+	if (first == NULL) { last = NULL; }
 	res->next = NULL;
 	return res;
 }

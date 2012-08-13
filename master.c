@@ -21,14 +21,16 @@ int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 	if (string != NULL) {
 	messages++;
     forward (hash_publish, string);
-	if (messages%1000==0) printf ("%d\n",messages);
+	if (messages%1000==0)
+	 printf ("%d\n",messages);
 }
 	free(string);
 }
 
 int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
-	char *string = zstr_recv_nowait (work_collect);	
-	printf("Tralala der %s is da.\n",string);
+	char *string = zstr_recv (work_collect);	
+	forward_wp(work_publish,string);
+//	printf("Tralala der %s is da.\n",string+20);
 	free(string);
 }
 

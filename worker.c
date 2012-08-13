@@ -49,7 +49,7 @@ void receive_work() {
     zmq_msg_t message;
 	zmq_msg_init (&message);
 	printf("Waiting for work\n");
-	zmq_recv (recv_ctrl, &message, 0); 
+	zmq_recv (recv_work, &message, 0); 
     int size = zmq_msg_size (&message);
 	char *data = zmq_msg_data (&message);
 	printf("continuing\n");
@@ -60,17 +60,11 @@ void receive_work() {
     memcpy (digest, data, 20);	
 	enqueue(term,digest);
     zmq_msg_close (&message);
-    zmq_msg_t reply;
-    zmq_msg_init_size (&reply, 3);
-    memcpy (zmq_msg_data (&reply), "ok", 3);
-    zmq_send (recv_ctrl, &reply, 0);
-    zmq_msg_close (&reply);
 }
 
 
 void work_hard() {
 
-	
 
 if (is_empty()) { receive_work(); }
 	
@@ -98,8 +92,17 @@ assert(!is_empty());
 			    sha1(r,d);
 			    if (!contains(d)) { 
 //				 put_local(d);
-				 enqueue(r,d); 
-			 	 send_digest_queued(send_hashes,d);
+// 
+				 //enqueue(r,d); 
+				 
+				   zmq_msg_t message;
+				   zmq_msg_init_size (&message, 20+strlen(r));
+				   memcpy (zmq_msg_data (&message), d, 20);
+				   memcpy (zmq_msg_data (&message)+20, r, strlen(r));
+   			       zmq_send (send_work, &message, 0);
+				   zmq_msg_close (&message);
+
+			 	   send_digest_queued(send_hashes,d);
 				}
 				else {
 					free(r);
@@ -132,16 +135,23 @@ int main (int argc, char *argv []) {
 	context = zmq_init (1); 
 	
 	send_hashes = zmq_socket (context, ZMQ_PUSH);
-
     zmq_connect (send_hashes, "tcp://localhost:5001");
 
     recv_hashes = zmq_socket (context, ZMQ_SUB);
     zmq_connect (recv_hashes, "tcp://localhost:5000");
 
-	recv_ctrl = zmq_socket (context, ZMQ_REP);
-	int port = zmq_bind(recv_ctrl, "tcp://*:4567");
+	send_work = zmq_socket (context, ZMQ_PUSH);
+    zmq_connect (send_work, "tcp://localhost:5003");
+
+    recv_work = zmq_socket (context, ZMQ_PULL);
+    zmq_connect (recv_work, "tcp://localhost:5002");
+
+
+
+//	recv_ctrl = zmq_socket (context, ZMQ_REP);
+//	int port = zmq_bind(recv_ctrl, "tcp://*:4567");
 	
-	printf("port: %i\n",port);
+//	printf("port: %i\n",port);
 
 
 	char *filter = "";

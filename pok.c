@@ -16,7 +16,7 @@ int main (int argc, char *argv []) {
 	context = zmq_init (1);
     back = zmq_socket (context, ZMQ_REQ);
 
-    zmq_connect (back, "tcp://localhost:4567");
+    zmq_connect (back, "tcp://localhost:5003");
 		
 	char *digest = malloc(20);
 	

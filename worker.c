@@ -37,72 +37,59 @@ void *update_hashes(void *arg) {
 	return 0;
 }
 
-void *print_stats(void *arg) {
-	while(running) {
-		printf("Queue: %i\n",q_size());
-		sleep(5);
-	}
-	return 0;
-}
 
-void receive_work() {
+
+tCell *receive_work() {
     zmq_msg_t message;
 	zmq_msg_init (&message);
-	printf("Waiting for work\n");
 	zmq_recv (recv_work, &message, 0); 
+	
     int size = zmq_msg_size (&message);
 	char *data = zmq_msg_data (&message);
-	printf("continuing\n");
-
 	char *term = malloc(size-20);
 	char *digest = malloc(20);
     memcpy (term, data+20, size-20);
     memcpy (digest, data, 20);	
-	enqueue(term,digest);
+
+//	printf("W: %s S: %i\n",term,size);	
+	tCell *new = malloc(sizeof(tCell));
+	new->term = term;
+	new->digest = digest;
+	
     zmq_msg_close (&message);
+	return new;
 }
 
 
 void work_hard() {
 
-
-if (is_empty()) { receive_work(); }
-	
-assert(!is_empty());
-	
-	//printf("%d %d %d\n",count,count_elements(),q_size());
-	tCell *t = dequeue();
+	tCell *t = receive_work(); 
+	s_sleep(10);
 
 	assert(t->term != NULL);
 	assert(t->digest != NULL);
-//	printf("process: %s ...",t->term);
 
-	
-	if (!contains_processed(t->digest)) {
-		hit++;
-		int i;
+	hit++;
+	int i;
 
-		int l = atoi(t->term);
+	int l = atoi(t->term);
 
-		for (i=0;i<N;i++) {
+	for (i=0;i<N;i++) {
 			if (produce_work(l,i)) { 
 				char *r = malloc(10);
 				sprintf(r,"%d",i);
 				char *d = malloc(20);
 			    sha1(r,d);
 			    if (!contains(d)) { 
-//				 put_local(d);
-// 
-				 //enqueue(r,d); 
-				 
 				   zmq_msg_t message;
 				   zmq_msg_init_size (&message, 20+strlen(r));
 				   memcpy (zmq_msg_data (&message), d, 20);
 				   memcpy (zmq_msg_data (&message)+20, r, strlen(r));
    			       zmq_send (send_work, &message, 0);
 				   zmq_msg_close (&message);
+				   put_local(d);
 
-			 	   send_digest_queued(send_hashes,d);
+//			 	   send_digest_queued(send_hashes,d);
 				}
 				else {
 					free(r);
@@ -112,20 +99,11 @@ assert(!is_empty());
 		}
 //		printf("%s done\n",node);
 		send_digest_processed(send_hashes, t->digest);
-	}
-	else {
-		cache++;
-//		printf("cache hit\n");
-	}
+	
 	
 	free(t->term);
 	free(t->digest);
 	free(t);
-
-
-	
-//	printf("%d\n",q_size());
-//	print_queue();
 }
 
 
@@ -160,8 +138,8 @@ int main (int argc, char *argv []) {
     pthread_t worker;
     pthread_create (&worker, NULL, update_hashes, (void*) &context);
 
-    pthread_t stats;
-    pthread_create (&stats, NULL, print_stats, NULL);
+//    pthread_t stats;
+//    pthread_create (&stats, NULL, print_stats, NULL);
 
     
 	printf("starting\n");

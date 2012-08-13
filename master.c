@@ -7,7 +7,7 @@
 #include "hashmap.c"
 #include "zhelpers.h"
 
-int messages = 0;
+int hashes = 0, work=0, enq = 0;
 
 volatile int next_worker_id = 2;
 
@@ -19,24 +19,45 @@ void *hash_publish,
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 	char *string = zstr_recv(hash_collect);	
 	if (string != NULL) {
-	messages++;
-    forward (hash_publish, string);
-	if (messages%1000==0)
-	 printf ("%d\n",messages);
-}
+//		print_key(string);
+//		printf("\n");	
+		if(string[0] == 1) put(string);	
+	    hashes++;
+        forward (hash_publish, string);
+    }
 	free(string);
 }
 
 int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
-	char *string = zstr_recv (work_collect);	
-	forward_wp(work_publish,string);
-//	printf("Tralala der %s is da.\n",string+20);
+	char *string = zstr_recv (work_collect);
+		if (string != NULL) {	
+		//	printf("%i,* %s *\n",work,string+21);	
+	        work++;
+   	        if (!contains(string)) {
+	          forward_wp(work_publish,string);
+			   enq++;
+			   put_local(string);
+         	}
+        }
 	free(string);
 }
 
+void *print_stats(void *arg) {
+	while(1) {
+		printf("Hashes: %i/%i Workpackages: %i/%i\n",hashes,count_elements(),work,enq);
+		sleep(5);
+	}
+	return 0;
+}
+
+
 int main (void)
 {
-     zctx_t *ctx = zctx_new ();
+	pthread_t stats;
+	pthread_create (&stats, NULL, print_stats, NULL);
+	
+	
+    zctx_t *ctx = zctx_new ();
 
     hash_publish = zsocket_new (ctx, ZMQ_PUB);
     hash_collect = zsocket_new (ctx, ZMQ_PULL);

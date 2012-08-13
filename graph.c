@@ -2,8 +2,9 @@
 #include<stdlib.h>
 #include<time.h>
 
+
 #define N	10000
-#define DENSITY 1
+#define DENSITY 10
 
 
 int matrix[N][N];
@@ -33,7 +34,8 @@ void init_graph(void) {
 
 int produce_work(int i, int j) {
 //	printf("looking at %i %i %i\n",i,j,matrix[i][j]);
-      return matrix[i][j];
+
+     return matrix[i][j];
 }
 
 

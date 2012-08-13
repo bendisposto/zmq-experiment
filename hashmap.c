@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define HASHSIZE 524288
 #define ENTRY 21
 
 static char a[HASHSIZE][ENTRY];
 
-void print_key(char key[20]) {
-	int o; for(o=0;o<20;o++) printf("%d ",key[o]);
+void print_key(char key[21]) {
+	int o; for(o=0;o<21;o++) printf("%d ",key[o]);
 }
 
 int ith_index_of(char key[20], int i) {
@@ -36,6 +37,9 @@ int index_of(char key[20]) {
 
 int contains(char key[21]) {
 	int p = index_of(key);
+//	print_key(key);printf("\n");
+//	print_key(a[p]);printf("\n");
+//	sleep(1);
 	if (memcmp(a[p],"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",20)==0) return 0;
 	if (memcmp(a[p],key,20)==0) return 1;
 	return 0;

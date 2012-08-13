@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <czmq.h>
 
 void *context, *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl;
 int count = 0;
@@ -43,34 +44,45 @@ void *print_stats(void *arg) {
 	return 0;
 }
 
+void check_signals() {
+	zmq_msg_t message;
+	zmq_msg_init (&message);
+	zmq_recv (recv_ctrl, &message, ZMQ_NOBLOCK); 
+    int size = zmq_msg_size (&message);
+    if (size > 0) {
+		char *data = zmq_msg_data (&message);
+		printf("Controlmessage: %s \n",data);
+    }
+    zmq_msg_close (&message);
+}
+
 void receive_work() {
     zmq_msg_t message;
 	zmq_msg_init (&message);
 	printf("Waiting for work\n");
-	zmq_recv (recv_ctrl, &message, 0); 
+	zmq_recv (recv_work, &message, 0); 
     int size = zmq_msg_size (&message);
 	char *data = zmq_msg_data (&message);
-	printf("continuing\n");
-
 	char *term = malloc(size-20);
 	char *digest = malloc(20);
     memcpy (term, data+20, size-20);
     memcpy (digest, data, 20);	
+	printf("continuing with %s\n",term);
 	enqueue(term,digest);
     zmq_msg_close (&message);
     zmq_msg_t reply;
     zmq_msg_init_size (&reply, 3);
     memcpy (zmq_msg_data (&reply), "ok", 3);
-    zmq_send (recv_ctrl, &reply, 0);
+    zmq_send (recv_work, &reply, 0);
     zmq_msg_close (&reply);
 }
 
 
 void work_hard() {
 
-	
+	check_signals(); 
 
-if (is_empty()) { receive_work(); }
+  if (is_empty()) { receive_work(); }
 	
 assert(!is_empty());
 	
@@ -136,11 +148,15 @@ int main (int argc, char *argv []) {
     recv_hashes = zmq_socket (context, ZMQ_SUB);
     zmq_connect (recv_hashes, "tcp://localhost:5556");
 
-	recv_ctrl = zmq_socket (context, ZMQ_REP);
-	int port = zmq_bind(recv_ctrl, "tcp://*:4567");
+	recv_work = zmq_socket (context, ZMQ_REP);
+	int wport = zsocket_bind(recv_work, "tcp://*:*");
 	
-	printf("port: %i\n",port);
+	printf("Waiting for work on port %i\n",wport);
 
+	recv_ctrl = zmq_socket (context, ZMQ_PULL);
+	int cport = zsocket_bind(recv_ctrl, "tcp://*:*");
+	
+	printf("Waiting for controlmessages on port %i\n",cport);
 
 	char *filter = "";
 	zmq_setsockopt (recv_hashes, ZMQ_SUBSCRIBE, filter, strlen (filter));

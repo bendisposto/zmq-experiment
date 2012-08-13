@@ -1,4 +1,5 @@
 #include <zmq.h>
+#include <czmq.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,41 +11,52 @@ int messages = 0;
 
 volatile int next_worker_id = 2;
 
-void *id_requests(void *arg) {
-		while(1) {
-			char *z = s_recv(id_requests);
-			
-			free(z);
-		}
+void *hash_publish, 
+     *hash_collect, 
+     *work_publish, 
+	*work_collect;
+
+int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
+	char *string = zstr_recv(hash_collect);	
+	if (string != NULL) {
+	messages++;
+    forward (hash_publish, string);
+	if (messages%1000==0) printf ("%d\n",messages);
+}
+	free(string);
+}
+
+int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
+	char *string = zstr_recv_nowait (work_collect);	
+	printf("Tralala der %s is da.\n",string);
+	free(string);
 }
 
 int main (void)
 {
-    void *context = zmq_init (1);
+     zctx_t *ctx = zctx_new ();
 
-    void *hash_publish = zmq_socket (context, ZMQ_PUB);
-    zmq_bind (hash_publish, "tcp://*:5556");
-    zmq_bind (hash_publish, "ipc://hash_publish.ipc");  
+    hash_publish = zsocket_new (ctx, ZMQ_PUB);
+    hash_collect = zsocket_new (ctx, ZMQ_PULL);
+    work_publish = zsocket_new (ctx, ZMQ_PUSH);
+    work_collect = zsocket_new (ctx, ZMQ_PULL);
+     
+    zsocket_bind (hash_publish, "tcp://*:5000");
+    zsocket_bind (hash_collect, "tcp://*:5001");
+    zsocket_bind (work_publish, "tcp://*:5002");
+    zsocket_bind (work_collect, "tcp://*:5003");
 
-    void *hash_collect = zmq_socket (context, ZMQ_PULL);
-    zmq_bind (hash_collect, "tcp://*:5557");
-    zmq_bind (hash_collect, "ipc://hash_collect.ipc");
+ 
+	printf("le reactor\n");
+   zloop_t *reactor = zloop_new ();
+   zmq_pollitem_t poller2 = { hash_collect, 0, ZMQ_POLLIN };
+   zmq_pollitem_t poller4 = { work_collect, 0, ZMQ_POLLIN };
 
-    void *id_requests = zmq_socket (context, ZMQ_REP);
-    zmq_bind (id_requests, "tcp://*:5558");
-    zmq_bind (id_requests, "ipc://id_requests.ipc");
+   zloop_poller (reactor, &poller2, h_hash, NULL);
+   zloop_poller (reactor, &poller4, h_work, NULL);
+   zloop_start  (reactor);
+   zloop_destroy (&reactor);
 
-
-    while (1) {
-        char *string = s_recv(hash_collect);
-		messages++;
-		put(string);
-        forward (hash_publish, string);
-		if (messages%1000==0) printf ("%d\n",messages);
-    }
-
-    zmq_close (hash_publish);
-    zmq_close (hash_collect);
-    zmq_term (context);
+	zctx_destroy (&ctx);
     return 0;
 }

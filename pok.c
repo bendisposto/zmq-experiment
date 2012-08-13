@@ -30,7 +30,7 @@ int main (int argc, char *argv []) {
     zmq_send (back, &message, 0);
     zmq_msg_close (&message);
 
-    zmq_close (recv_hashes);
+    zmq_close (back);
     zmq_term (context);
 
     return 0;

@@ -20,8 +20,10 @@ volatile int running = 1;
 
 
 void *update_hashes(void *arg) {
+	printf("le receiver\n");
 	while(running) {
 		char *z = s_recv(recv_hashes);
+//		printf("R: %s\n",z);
 		if (z != NULL) {
 			if (z[0]<2) {
 				put(z);
@@ -131,10 +133,10 @@ int main (int argc, char *argv []) {
 	
 	send_hashes = zmq_socket (context, ZMQ_PUSH);
 
-    zmq_connect (send_hashes, "tcp://localhost:5557");
+    zmq_connect (send_hashes, "tcp://localhost:5001");
 
     recv_hashes = zmq_socket (context, ZMQ_SUB);
-    zmq_connect (recv_hashes, "tcp://localhost:5556");
+    zmq_connect (recv_hashes, "tcp://localhost:5000");
 
 	recv_ctrl = zmq_socket (context, ZMQ_REP);
 	int port = zmq_bind(recv_ctrl, "tcp://*:4567");

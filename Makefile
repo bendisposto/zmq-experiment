@@ -1,13 +1,18 @@
+LIBRARIES=-lzmq -lczmq
+WARN=-Wall -Wno-unused-function
+MODE_D=-O0 -g -DDEBUG
+MODE_R=-O3
+
 master: master.c hashmap.c mqhelper.c
-	gcc -O3 -lzmq -lczmq -o master master.c
+	gcc ${MODE_R} -o master master.c ${LIBRARIES} ${WARN}
 
 worker: worker.c hashmap.c mqhelper.c queue.c graph.c sha.c zhelpers.h
-	gcc -O3 -lczmq  -lzmq -o worker worker.c
+	gcc ${MODE_R} -o worker worker.c ${LIBRARIES} ${WARN}
 
 pok: pok.c
-	gcc -O3 -lczmq  -lzmq -o pok pok.c 
+	gcc ${MODE_R} -o pok pok.c ${LIBRARIES} ${WARN}
 
 all: master worker pok
 	
 clean:
-	rm -f master worker
+	rm -f master worker pok

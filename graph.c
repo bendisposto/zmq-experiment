@@ -4,7 +4,7 @@
 
 
 #define N	10000
-#define DENSITY 10
+#define DENSITY 100
 
 
 int matrix[N][N];

@@ -14,6 +14,17 @@ int c = 0;
 
 void enqueue_fifo(char *term, char digest[20]);
 
+void enqueue_cell(tCell *cell) {
+    if (first == NULL) { first = cell; 
+        last = cell;
+        first->next = NULL;
+    }
+    else { 
+        tCell *temp = last; // for multithreading
+        last = cell;
+        temp->next = cell;
+    }
+}
 
 void enqueue(char *term, char digest[20]) {
 	enqueue_fifo(term,digest);

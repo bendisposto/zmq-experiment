@@ -30,7 +30,19 @@ int main (int argc, char *argv []) {
     zmq_send (back, &message, 0);
     zmq_msg_close (&message);
 
+
+    zmq_msg_t message2;
+    front = zmq_socket (context, ZMQ_PUSH);
+    zmq_connect (front, "tcp://localhost:49152");
+		
+    zmq_msg_init_size (&message2, 5);
+    memcpy (zmq_msg_data (&message2), "TOCK", 5);
+    zmq_send (front, &message2, 0);
+    zmq_msg_close (&message2);
+
+
     zmq_close (back);
+    zmq_close (front);
     zmq_term (context);
 
     return 0;

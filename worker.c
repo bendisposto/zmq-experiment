@@ -25,25 +25,25 @@ clock_t start, finish;
 volatile int running = 1;
 
 int h_hash(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-	char *z = NULL;
-    	
+    char *z = NULL;
+    
     while ((z = zstr_recv_nowait(recv_hashes)) != NULL) {
-    		printf("H\n");
-            put(z);
-            free(z); 
-	}
- 
+        printf("H\n");
+        put(z);
+        free(z); 
+    }
+    
     return 0; 
 }
 
 int h_tick (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-	char *z = s_recv(recv_tick);
-	    		printf("R: %s\n",z);
-	if (z != NULL) {
-		work_hard(); 
-	}
-	free(z);
-	return 0;
+    char *z = s_recv(recv_tick);
+    printf("R: %s\n",z);
+    if (z != NULL) {
+        work_hard(); 
+    }
+    free(z);
+    return 0;
 }
 
 
@@ -59,7 +59,7 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     memcpy (term, data+20, size-20);
     memcpy (digest, data, 20);  
     
-      printf("W: %s S: %i\n",term,size);      
+    printf("W: %s S: %i\n",term,size);      
     tCell *new = malloc(sizeof(tCell));
     new->term = term;
     new->digest = digest;
@@ -70,46 +70,46 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 }
 
 void tick() {
-	s_send(send_tick,"TOCK");
+    s_send(send_tick,"TOCK");
 }
 
 void work_hard () {
-        if (!is_empty(local_queue)) {     
-            tCell *t = dequeue(local_queue); 
-           
-            assert(t->term != NULL);
-            assert(t->digest != NULL);
-            
-            hit++;
-            int i;
-            
-            int l = atoi(t->term);
-            
-            for (i=0;i<N;i++) {
-                if (produce_work(l,i)) { 
-                    char *r = malloc(10);
-                    sprintf(r,"%d",i);
-                    char *d = malloc(20);
-                    sha1(r,d);
-                    if (!contains(d)) { 
-                        put_local(d);
-                        enqueue(local_queue, r, d);
-                        //send_digest_queued(send_hashes,d);
-                    }
-                    else {
-                        free(r);
-                        free(d);
-                    }
-                }		
-            }
-            //		printf("%s done\n",node);
-            send_digest_processed(send_hashes, t->digest);
-            
-            free(t->term);
-            free(t->digest);
-            free(t);
-       }
-			tick(); 
+    if (!is_empty(local_queue)) {     
+        tCell *t = dequeue(local_queue); 
+        
+        assert(t->term != NULL);
+        assert(t->digest != NULL);
+        
+        hit++;
+        int i;
+        
+        int l = atoi(t->term);
+        
+        for (i=0;i<N;i++) {
+            if (produce_work(l,i)) { 
+                char *r = malloc(10);
+                sprintf(r,"%d",i);
+                char *d = malloc(20);
+                sha1(r,d);
+                if (!contains(d)) { 
+                    put_local(d);
+                    enqueue(local_queue, r, d);
+                    //send_digest_queued(send_hashes,d);
+                }
+                else {
+                    free(r);
+                    free(d);
+                }
+            }		
+        }
+        //		printf("%s done\n",node);
+        send_digest_processed(send_hashes, t->digest);
+        
+        free(t->term);
+        free(t->digest);
+        free(t);
+    }
+    tick(); 
 }
 
 
@@ -131,10 +131,10 @@ int main (int argc, char *argv []) {
     zsocket_connect(send_work, "tcp://localhost:5003");
     zsocket_connect(recv_work, "tcp://localhost:5002");
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
-	char prot[22]; 
-	sprintf(prot,"tcp://localhost:%i",tickport);
-	printf("%s\n",prot);
-	
+    char prot[22]; 
+    sprintf(prot,"tcp://localhost:%i",tickport);
+    printf("%s\n",prot);
+    
     zsocket_connect(send_tick, prot);
     
     //	recv_ctrl = zmq_socket (context, ZMQ_REP);
@@ -143,8 +143,8 @@ int main (int argc, char *argv []) {
     //	printf("port: %i\n",port);
     
     
-	char *filter = "";
-	zmq_setsockopt (recv_hashes, ZMQ_SUBSCRIBE, filter, strlen (filter));
+    char *filter = "";
+    zmq_setsockopt (recv_hashes, ZMQ_SUBSCRIBE, filter, strlen (filter));
     
     printf("starting\n");
     printf("le reacteur\n");
@@ -173,7 +173,7 @@ int main (int argc, char *argv []) {
 }
 running = 0;
 printf("%d  %d\n",count,count_elements());
-printf("Hit: %d Cache: %d\n",hit,cache);
-*/
+    printf("Hit: %d Cache: %d\n",hit,cache);
+    */
     return 0;
 }

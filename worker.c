@@ -85,6 +85,8 @@ void work_hard () {
         
         int l = atoi(t->term);
         
+        zmsg_t *msg = zmsg_new ();
+        
         for (i=0;i<N;i++) {
             if (produce_work(l,i)) { 
                 char *r = malloc(10);
@@ -94,7 +96,8 @@ void work_hard () {
                 if (!contains(d)) { 
                     put_local(d);
                     enqueue(local_queue, r, d);
-                    send_digest_queued(send_hashes,d);
+                    add_queued_digest(msg, d);
+                    //send_digest_queued(send_hashes,d);
                 }
                 else {
                     free(r);
@@ -102,6 +105,8 @@ void work_hard () {
                 }
             }		
         }
+        
+        zmsg_send(&msg, send_hashes);
         //		printf("%s done\n",node);
         send_digest_processed(send_hashes, t->digest);
         

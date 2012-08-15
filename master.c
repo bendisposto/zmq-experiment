@@ -17,15 +17,26 @@ void *hash_publish,
 *work_collect;
 
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-    char *string = zstr_recv(hash_collect);	
-    if (string != NULL) {
+    zmsg_t *msg = zmsg_recv(hash_collect);	
+    if (msg != NULL) {
         //		print_key(string);
         //		printf("\n");	
-        if(string[0] == 1) put(string);	
-        hashes++;
-        forward (hash_publish, string);
+        int i;
+        int size = zmsg_size(msg);
+        for (i = 0; i < size; i++) {
+            zframe_t *frame = zmsg_pop(msg);
+            char *string = malloc(21);
+            string = zframe_strdup(frame);
+            if(string[0] == 1) put(string); 
+            hashes++;
+            forward (hash_publish, string);
+            free(string);
+            zframe_destroy(&frame);
+        }
+        
     }
-    free(string);
+    //free(msg);
+    zmsg_destroy(&msg);
     return 0;
 }
 

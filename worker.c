@@ -15,6 +15,9 @@
 void work_hard();
 
 void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick;
+
+wQueue *local_queue;
+
 int count = 0;
 int hit=0, cache=0;
 clock_t start, finish;
@@ -62,7 +65,7 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     new->digest = digest;
     zmq_msg_close (&message);
     
-    enqueue_cell(new);
+    enqueue_cell(local_queue, new);
     return 0;
 }
 
@@ -71,8 +74,8 @@ void tick() {
 }
 
 void work_hard () {
-        if (!is_empty()) {     
-            tCell *t = dequeue(); 
+        if (!is_empty(local_queue)) {     
+            tCell *t = dequeue(local_queue); 
            
             assert(t->term != NULL);
             assert(t->digest != NULL);
@@ -90,7 +93,7 @@ void work_hard () {
                     sha1(r,d);
                     if (!contains(d)) { 
                         put_local(d);
-                        enqueue(r, d);
+                        enqueue(local_queue, r, d);
                         //send_digest_queued(send_hashes,d);
                     }
                     else {
@@ -112,6 +115,7 @@ void work_hard () {
 
 int main (int argc, char *argv []) {
     init_graph();
+    local_queue = init_queue();
     
     zctx_t *ctx = zctx_new ();
     

@@ -94,7 +94,7 @@ void work_hard () {
                 if (!contains(d)) { 
                     put_local(d);
                     enqueue(local_queue, r, d);
-                    //send_digest_queued(send_hashes,d);
+                    send_digest_queued(send_hashes,d);
                 }
                 else {
                     free(r);

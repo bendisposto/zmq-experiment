@@ -14,7 +14,7 @@
 
 void work_hard();
 
-void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick;
+void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req;
 
 wQueue *local_queue;
 
@@ -117,6 +117,11 @@ void work_hard () {
     tick(); 
 }
 
+char *getId() {
+    s_send(id_req, "hello");
+    return s_recv(id_req);
+}
+
 
 int main (int argc, char *argv []) {
     init_graph();
@@ -131,10 +136,18 @@ int main (int argc, char *argv []) {
     recv_work = zsocket_new(ctx, ZMQ_PULL);
     recv_tick = zsocket_new(ctx, ZMQ_PULL);
     
+    id_req = zsocket_new(ctx, ZMQ_REQ);
+    zsocket_connect(id_req, "tcp://localhost:5005");
+    char *id = getId();
+    printf("my name is %s\n", id);
+    
     zsocket_connect(send_hashes, "tcp://localhost:5001");
     zsocket_connect(recv_hashes, "tcp://localhost:5000");
     zsocket_connect(send_work, "tcp://localhost:5003");
     zsocket_connect(recv_work, "tcp://localhost:5002");
+    
+    
+    free(id);
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
     char prot[22]; 
     sprintf(prot,"tcp://localhost:%i",tickport);
@@ -165,7 +178,7 @@ int main (int argc, char *argv []) {
     zloop_start  (reactor);
     zloop_destroy (&reactor);
     
-    zctx_destroy (&ctx);
+
     
     
     

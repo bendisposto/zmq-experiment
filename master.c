@@ -8,9 +8,13 @@
 #include "hashmap.c"
 #include "zhelpers.h"
 
+#define NOT_INITIALIZED	-1
+#define MINIMUM_SIZE  4000
+#define FIRST_WORKER	2
+
 int hashes = 0, work=0, enq = 0;
 
-volatile int next_worker_id = 2;
+volatile int next_worker_id = FIRST_WORKER;
 
 void *hash_publish, 
 *hash_collect, 
@@ -82,9 +86,9 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 			q_sizes = q_sizes * 2;
 			queues = realloc(queues,q_sizes*sizeof(int));
 			int i;
-			for (i=q_sizes/2;i<q_sizes;i++) { queues[i] = -42; }
+			for (i=q_sizes/2;i<q_sizes;i++) { queues[i] =  NOT_INITIALIZED; }
         }
-		queues[next_worker_id] = -42;
+		queues[next_worker_id] = NOT_INITIALIZED;
         
         zmq_msg_t message;
         zmq_msg_init_size (&message, len + 1);
@@ -107,11 +111,23 @@ void print_queuesizes() {
 	printf("\n");
 }    
 
+void transfer_work(int from, int to, int amount) {
+	printf("I demand that %i sends %i workpackages to %i\n", from, amount,to);
+}
+
 void *print_stats(void *arg) {
     while(1) {
         printf("Hashes: %i/%i Workpackages: %i/%i\n",hashes,count_elements(),work,enq);
 		print_queuesizes();
-        sleep(5);
+		if (next_worker_id - FIRST_WORKER > 1) {
+		int need = 0, has = 0;
+		int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
+			if (queues[i]>queues[has]) has = i;
+			if (queues[i] == 0) need = i;
+			if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,MINIMUM_SIZE); break; }
+		} 
+	}
+		sleep(5);
     }
     return 0;
 }
@@ -121,6 +137,7 @@ int main (void)
 {
 	
 	queues = malloc(5*sizeof(int));
+	int i;	for (i=0;i<q_sizes;i++) { queues[i] =  NOT_INITIALIZED; }
 	
     pthread_t stats;
     pthread_create (&stats, NULL, print_stats, NULL);

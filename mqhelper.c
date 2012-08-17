@@ -49,9 +49,10 @@ int forward_wp(void *socket, char *string) {
 	    int rc;
 		int len = strlen(string+20);
 	    zmq_msg_t message;
-	    zmq_msg_init_size (&message, 20+len);
+	    zmq_msg_init_size (&message, 21+len);
 	    memcpy (zmq_msg_data (&message), string, 20);
 	    memcpy (zmq_msg_data (&message)+20, string+20, len);
+		memcpy (zmq_msg_data (&message)+20+len, "\0", 1);
 	    rc = zmq_send (socket, &message, 0);
 	    zmq_msg_close (&message);
 	    return (rc);

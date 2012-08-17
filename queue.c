@@ -26,6 +26,7 @@ wQueue *init_queue() {
 void enqueue_fifo(wQueue *q, char *term, char digest[20]);
 
 void enqueue_cell(wQueue *q, tCell *cell) {
+	q->c++;
     if (q->first == NULL) {
         q->first = cell; 
         q->last = cell;

@@ -18,6 +18,9 @@ void *hash_publish,
 *work_collect,
 *id_response, *queuesizes;
 
+int *queues; 
+int q_sizes = 5;
+
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(hash_collect);	
     if (msg != NULL) {
@@ -35,7 +38,6 @@ int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
             free(string);
             zframe_destroy(&frame);
         }
-        
     }
     //free(msg);
     zmsg_destroy(&msg);
@@ -44,10 +46,11 @@ int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 
 int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {   
     char *string = zstr_recv (queuesizes);
-	char worker[strlen(string)];
-	char qs[strlen(string)];
-	sscanf(string,"%s %s",worker,qs);
-	printf("Worker %s: %s\n",worker,qs);
+	int worker;
+	int qs;
+	sscanf(string,"%i %i",&worker,&qs);
+//	printf("Worker %s: %s\n",worker,qs);
+	queues[worker] = qs;	
 	free(string);
 	
 }
@@ -68,12 +71,20 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 }
 
 int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-    char *string = zstr_recv (id_response);
+	char *string = zstr_recv (id_response);
     if (string != NULL) {
-        int len = ((int) log10(next_worker_id)) + 1;
-        char *id = malloc(len + 1);
+        int len = ((int) log10(next_worker_id+1)) + 1;
 
+        char *id = malloc(len + 1);
         sprintf(id, "%d", next_worker_id);
+
+        if (next_worker_id >= q_sizes) {
+			q_sizes = q_sizes * 2;
+			queues = realloc(queues,q_sizes*sizeof(int));
+			int i;
+			for (i=q_sizes/2;i<q_sizes;i++) { queues[i] = -42; }
+        }
+		queues[next_worker_id] = -42;
         
         zmq_msg_t message;
         zmq_msg_init_size (&message, len + 1);
@@ -87,11 +98,19 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     free(string);
     return 0;
 }
-    
+
+void print_queuesizes() {
+	int i;
+	for(i=2;i<q_sizes;i++) {
+		printf("(%i:%i) ",i,queues[i]);
+	}
+	printf("\n");
+}    
 
 void *print_stats(void *arg) {
     while(1) {
         printf("Hashes: %i/%i Workpackages: %i/%i\n",hashes,count_elements(),work,enq);
+		print_queuesizes();
         sleep(5);
     }
     return 0;
@@ -100,9 +119,11 @@ void *print_stats(void *arg) {
 
 int main (void)
 {
+	
+	queues = malloc(5*sizeof(int));
+	
     pthread_t stats;
     pthread_create (&stats, NULL, print_stats, NULL);
-    
     
     zctx_t *ctx = zctx_new ();
     

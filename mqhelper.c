@@ -13,6 +13,7 @@ int send_digest_processed(void *socket, char string[20]) {
 	    zmq_msg_close (&message);
 	    return (rc);
 }
+
 int send_digest_queued(void *socket, char string[20]) {
     int rc;
     zmq_msg_t message;
@@ -29,9 +30,8 @@ int add_queued_digest(zmsg_t *msg, char string[20]) {
     char tmp[21];
     memcpy (tmp, "\0", 1);
     memcpy (tmp+1, string, 20);
-    int rc = zmsg_addmem(msg, tmp, 21);
-    assert(rc == 0);
-    return rc;
+    zmsg_addmem(msg, tmp, 21);
+    return 0;
 }
 
 int forward(void *socket, char string[21]) {

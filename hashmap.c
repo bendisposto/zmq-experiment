@@ -79,14 +79,23 @@ int count_elements() {
 }
 
 
+ void init_hashmap() {
+	int i;
+	for(i=0;i<HASHSIZE;i++) {
+		memcpy (a[i], "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 21);
+	}
+}
+
 /*
 int main(void) {
+	init();
 	char *text="HJ48dsj^3_3s2}d3is71";
 	char *text2="HJ49dsj^3_3s2}d3is71";
 	put(text);
 	put(text2);
 	printf("%i\n",contains(text));	
 	printf("%i\n",contains(text2));	
- return 3;
+	while(1) {}
+    return 3;
 }
 */

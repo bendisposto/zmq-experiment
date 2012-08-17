@@ -16,7 +16,7 @@ void *hash_publish,
 *hash_collect, 
 *work_publish, 
 *work_collect,
-*id_response;
+*id_response, *queuesizes;
 
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(hash_collect);	
@@ -40,6 +40,16 @@ int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     //free(msg);
     zmsg_destroy(&msg);
     return 0;
+}
+
+int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {   
+    char *string = zstr_recv (queuesizes);
+	char worker[strlen(string)];
+	char qs[strlen(string)];
+	sscanf(string,"%s %s",worker,qs);
+	printf("Worker %s: %s\n",worker,qs);
+	free(string);
+	
 }
 
 int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
@@ -101,22 +111,26 @@ int main (void)
     work_publish = zsocket_new (ctx, ZMQ_PUSH);
     work_collect = zsocket_new (ctx, ZMQ_PULL);
     id_response = zsocket_new (ctx, ZMQ_REP);
+    queuesizes = zsocket_new (ctx, ZMQ_PULL);
     
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");
     zsocket_bind (work_publish, "tcp://*:5002");
     zsocket_bind (work_collect, "tcp://*:5003");
     zsocket_bind (id_response, "tcp://*:5005");
+    zsocket_bind (queuesizes, "tcp://*:5006");
     
     printf("le reactor\n");
     zloop_t *reactor = zloop_new ();
     zmq_pollitem_t poller2 = { hash_collect, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller4 = { work_collect, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { id_response, 0, ZMQ_POLLIN };
+    zmq_pollitem_t poller8 = { queuesizes, 0, ZMQ_POLLIN };
     
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_id, NULL);
+    zloop_poller (reactor, &poller8, h_queues, NULL);
     zloop_start  (reactor);
     zloop_destroy (&reactor);
     

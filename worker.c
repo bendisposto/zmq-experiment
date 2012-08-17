@@ -14,7 +14,8 @@
 
 void work_hard();
 
-void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req;
+void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req, *que_info;
+volatile char *id;
 
 wQueue *local_queue;
 
@@ -28,7 +29,7 @@ int h_hash(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     char *z = NULL;
     
     while ((z = zstr_recv_nowait(recv_hashes)) != NULL) {
-        printf("H\n");
+//        printf("H\n");
         put(z);
         free(z); 
     }
@@ -38,7 +39,7 @@ int h_hash(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 
 int h_tick (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     char *z = s_recv(recv_tick);
-    printf("R: %s\n",z);
+//    printf("R: %s\n",z);
     if (z != NULL) {
         work_hard(); 
     }
@@ -122,10 +123,31 @@ char *getId() {
     return s_recv(id_req);
 }
 
+void *print_stats(void *arg) {
+    while(1) {
+		int s = q_size(local_queue);
+   //     printf("Queuesize %i %s\n",s,id);
+	   if (id != NULL) {
+		int sze = strlen(id) + ((int)log10(s+1))+3;
+//		printf("S: %d\n",sze);
+		char *msg = malloc(sze);
+		sprintf(msg,"%s %d",id,s);
+        s_send(que_info, msg);
+		free(msg);
+      }
+        sleep(5);
+    }
+ 
+    return 0;
+}
 
 int main (int argc, char *argv []) {
     init_graph();
+	init_hashmap();
     local_queue = init_queue();
+
+    pthread_t stats;
+    pthread_create (&stats, NULL, print_stats, NULL);
     
     zctx_t *ctx = zctx_new ();
     
@@ -138,8 +160,11 @@ int main (int argc, char *argv []) {
     
     id_req = zsocket_new(ctx, ZMQ_REQ);
     zsocket_connect(id_req, "tcp://localhost:5005");
-    char *id = getId();
+    id = getId();
     printf("my name is %s\n", id);
+
+    que_info = zsocket_new(ctx, ZMQ_PUSH);
+    zsocket_connect(que_info, "tcp://localhost:5006");
     
     zsocket_connect(send_hashes, "tcp://localhost:5001");
     zsocket_connect(recv_hashes, "tcp://localhost:5000");
@@ -147,7 +172,7 @@ int main (int argc, char *argv []) {
     zsocket_connect(recv_work, "tcp://localhost:5002");
     
     
-    free(id);
+
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
     char prot[22]; 
     sprintf(prot,"tcp://localhost:%i",tickport);
@@ -178,7 +203,7 @@ int main (int argc, char *argv []) {
     zloop_start  (reactor);
     zloop_destroy (&reactor);
     
-
+    free(id);
     
     
     

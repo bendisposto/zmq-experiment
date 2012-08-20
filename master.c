@@ -9,7 +9,7 @@
 #include "zhelpers.h"
 
 #define NOT_INITIALIZED	-1
-#define MINIMUM_SIZE  4000
+#define MINIMUM_SIZE  200
 #define FIRST_WORKER	2
 #define N_WORKERS   16
 
@@ -28,7 +28,7 @@ int queues[N_WORKERS];
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(hash_collect);	
     if (msg != NULL) {
-		zmsg_send(&msg, hash_publish);
+        zmsg_send(&msg, hash_publish);
     }
     zmsg_destroy(&msg);
     return 0;
@@ -36,39 +36,42 @@ int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 
 int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {   
     char *string = zstr_recv (queuesizes);
-	int worker;
-	int qs;
-	sscanf(string,"%i %i",&worker,&qs);
-//	printf("Worker %s: %s\n",worker,qs);
-	queues[worker] = qs;	
-	free(string);
-	return 0;
+    int worker;
+    int qs;
+    sscanf(string,"%i %i",&worker,&qs);
+    //	printf("Worker %s: %s\n",worker,qs);
+    queues[worker] = qs;	
+    free(string);
+    return 0;
 }
 
-int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
+int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
+    work++;
     // Receive and forward
-    zmsg_t *msg = zmsg_recv(work_collect);	
+    zmsg_t *msg = zmsg_recv(work_collect);
+    zframe_t *nullframe = zmsg_pop (msg);
+    zframe_destroy(&nullframe);
     if (msg != NULL) {
-		zmsg_send(&msg, work_publish);
+        zmsg_send(&msg, work_publish);       
     }
     zmsg_destroy(&msg);
     return 0;
 }
 
 int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-	char *string = zstr_recv (id_response);
+    char *string = zstr_recv (id_response);
     if (string != NULL) {
         int len = ((int) log10(next_worker_id+1)) + 1;
-
+        
         if (next_worker_id >= N_WORKERS) {
-			printf("We only support %i workers.",N_WORKERS);
-			return -1;
+            printf("We only support %i workers.",N_WORKERS);
+            return -1;
         }
-
-	    char *id = malloc(len + 1);
-	    sprintf(id, "%d", next_worker_id);
-		queues[next_worker_id] = NOT_INITIALIZED;
-		zmq_msg_t message;
+        
+        char *id = malloc(len + 1);
+        sprintf(id, "%d", next_worker_id);
+        queues[next_worker_id] = NOT_INITIALIZED;
+        zmq_msg_t message;
         zmq_msg_init_size (&message, len + 1);
         memcpy (zmq_msg_data (&message), id, len + 1);
         zmq_send (id_response, &message, 0);
@@ -81,40 +84,43 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 }
 
 void print_queuesizes() {
-	int i;
-	for(i=2;i<q_sizes;i++) {
-		printf("(%i:%i) ",i,queues[i]);
-	}
-	printf("\n");
+    int i;
+    for(i = 2; i < N_WORKERS; i++) {
+        printf("(%i:%i) ",i,queues[i]);
+    }
+    printf("\n");
 }    
 
 void transfer_work(int from, int to, int amount) {
-	printf("I demand that %i sends %i workpackages to %i\n", from, amount,to);
-	char *sfrom, *sto, *samount;
-	sfrom = int2string(from);
-	sto = int2string(to);
-	samount = int2string(amount);	
-	s_sendmore(work_collect,sto);
-	s_sendmore(work_collect, sfrom);
-	s_send(work_collect, amount);
-	free(sto);
-	free(sfrom);
-	free(samount);
+    printf("I demand that %i sends %i workpackages to %i\n", from, amount,to);
+    char *sfrom, *sto, *samount;
+    
+    sfrom = int2string(from);
+    sto = int2string(to);
+    samount = int2string(amount);
+    
+    s_sendmore(work_collect,sfrom);
+    s_sendmore(work_collect, sto);
+    s_send(work_collect, samount);
+    
+    free(sto);
+    free(sfrom);
+    free(samount);
 }
 
 void *print_stats(void *arg) {
     while(1) {
         printf("Workpackages: %i/%i\n",work,enq);
-		print_queuesizes();
-		if (next_worker_id - FIRST_WORKER > 1) {
-		int need = 0, has = 0;
-		int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
-			if (queues[i]>queues[has]) has = i;
-			if (queues[i] == 0) need = i;
-			if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
-		} 
-	}
-		sleep(5);
+        print_queuesizes();
+        if (next_worker_id - FIRST_WORKER > 1) {
+            int need = 0, has = 0;
+            int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
+                if (queues[i]>queues[has]) has = i;
+           if (queues[i] == 0) need = i;
+           if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
+            } 
+        }
+        sleep(5);
     }
     return 0;
 }
@@ -122,10 +128,13 @@ void *print_stats(void *arg) {
 
 int main (void)
 {
-	
-	queues = malloc(5*sizeof(int));
-	int i;	for (i=0;i<q_sizes;i++) { queues[i] =  NOT_INITIALIZED; }
-	
+    
+    //queues = malloc(5*sizeof(int));
+    int i;
+    for (i = 0; i < N_WORKERS; i++) {
+        queues[i] =  NOT_INITIALIZED;
+    }
+    
     pthread_t stats;
     pthread_create (&stats, NULL, print_stats, NULL);
     

@@ -3,18 +3,19 @@
 #include <string.h>
 #include "zhelpers.h"
 #include "hashmap.c"
-#include "queue.c"
+//#include "queue.c"
 #include "sha.c"
 #include "graph.c"
 #include <pthread.h>
 #include "mqhelper.c"
+#include <czmq.h>
 
 void *context, *front, *back;
 
 int main (int argc, char *argv []) {
     
     context = zmq_init (1);
-    back = zmq_socket (context, ZMQ_PUSH);
+    back = zmq_socket (context, ZMQ_DEALER);
     
     zmq_connect (back, "tcp://localhost:5003");
     
@@ -22,14 +23,21 @@ int main (int argc, char *argv []) {
     
     sha1("0",digest);
     
-    zmq_msg_t message;
+    /*zmq_msg_t message;
     zmq_msg_init_size (&message, 22);
+    
     memcpy (zmq_msg_data (&message), digest, 20);
     memcpy (zmq_msg_data (&message)+20, "0", 2);
     
     zmq_send (back, &message, 0);
-    zmq_msg_close (&message);
-    
+    zmq_msg_close (&message);*/
+    char wp[22];
+    memcpy(wp, digest, 20);
+    memcpy(wp + 20, "0", 2);
+    zmsg_t *message = zmsg_new();  
+    zmsg_addmem(message, wp, 22);
+    zmsg_pushstr(message, "2");
+    zmsg_send(&message, back);
     
     zmq_msg_t message2;
     front = zmq_socket (context, ZMQ_PUSH);

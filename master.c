@@ -5,12 +5,13 @@
 #include <string.h>
 #include <math.h>
 #include "mqhelper.c"
-#include "hashmap.c"
+//#include "hashmap.c"
 #include "zhelpers.h"
 
 #define NOT_INITIALIZED	-1
 #define MINIMUM_SIZE  4000
 #define FIRST_WORKER	2
+#define N_WORKERS   16
 
 int hashes = 0, work=0, enq = 0;
 
@@ -22,28 +23,13 @@ void *hash_publish,
 *work_collect,
 *id_response, *queuesizes;
 
-int *queues; 
-int q_sizes = 5;
+int queues[N_WORKERS]; 
 
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(hash_collect);	
     if (msg != NULL) {
-        //		print_key(string);
-        //		printf("\n");	
-        int i;
-        int size = zmsg_size(msg);
-        for (i = 0; i < size; i++) {
-            zframe_t *frame = zmsg_pop(msg);
-            char *string = malloc(21);
-            string = zframe_strdup(frame);
-            if(string[0] == 1) put(string); 
-            hashes++;
-            forward (hash_publish, string);
-            free(string);
-            zframe_destroy(&frame);
-        }
+		zmsg_send(&msg, hash_publish);
     }
-    //free(msg);
     zmsg_destroy(&msg);
     return 0;
 }
@@ -56,21 +42,16 @@ int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 //	printf("Worker %s: %s\n",worker,qs);
 	queues[worker] = qs;	
 	free(string);
-	
+	return 0;
 }
 
 int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {     
-    char *string = zstr_recv (work_collect);
-    if (string != NULL) {
-//         printf("%i,* %s *\n",work,string+21);	
-        work++;
-        if (!contains(string)) {
-            forward_wp(work_publish,string);
-            enq++;
-            put_local(string);
-        }
+    // Receive and forward
+    zmsg_t *msg = zmsg_recv(work_collect);	
+    if (msg != NULL) {
+		zmsg_send(&msg, work_publish);
     }
-    free(string);
+    zmsg_destroy(&msg);
     return 0;
 }
 
@@ -79,23 +60,19 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     if (string != NULL) {
         int len = ((int) log10(next_worker_id+1)) + 1;
 
-        char *id = malloc(len + 1);
-        sprintf(id, "%d", next_worker_id);
-
-        if (next_worker_id >= q_sizes) {
-			q_sizes = q_sizes * 2;
-			queues = realloc(queues,q_sizes*sizeof(int));
-			int i;
-			for (i=q_sizes/2;i<q_sizes;i++) { queues[i] =  NOT_INITIALIZED; }
+        if (next_worker_id >= N_WORKERS) {
+			printf("We only support %i workers.",N_WORKERS);
+			return -1;
         }
+
+	    char *id = malloc(len + 1);
+	    sprintf(id, "%d", next_worker_id);
 		queues[next_worker_id] = NOT_INITIALIZED;
-        
-        zmq_msg_t message;
+		zmq_msg_t message;
         zmq_msg_init_size (&message, len + 1);
         memcpy (zmq_msg_data (&message), id, len + 1);
         zmq_send (id_response, &message, 0);
         zmq_msg_close (&message);
-        
         free(id);
         next_worker_id++;
     }
@@ -113,18 +90,28 @@ void print_queuesizes() {
 
 void transfer_work(int from, int to, int amount) {
 	printf("I demand that %i sends %i workpackages to %i\n", from, amount,to);
+	char *sfrom, *sto, *samount;
+	sfrom = int2string(from);
+	sto = int2string(to);
+	samount = int2string(amount);	
+	s_sendmore(work_collect,sto);
+	s_sendmore(work_collect, sfrom);
+	s_send(work_collect, amount);
+	free(sto);
+	free(sfrom);
+	free(samount);
 }
 
 void *print_stats(void *arg) {
     while(1) {
-        printf("Hashes: %i/%i Workpackages: %i/%i\n",hashes,count_elements(),work,enq);
+        printf("Workpackages: %i/%i\n",work,enq);
 		print_queuesizes();
 		if (next_worker_id - FIRST_WORKER > 1) {
 		int need = 0, has = 0;
 		int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
 			if (queues[i]>queues[has]) has = i;
 			if (queues[i] == 0) need = i;
-			if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,MINIMUM_SIZE); break; }
+			if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
 		} 
 	}
 		sleep(5);
@@ -146,8 +133,8 @@ int main (void)
     
     hash_publish = zsocket_new (ctx, ZMQ_PUB);
     hash_collect = zsocket_new (ctx, ZMQ_PULL);
-    work_publish = zsocket_new (ctx, ZMQ_PUSH);
-    work_collect = zsocket_new (ctx, ZMQ_PULL);
+    work_publish = zsocket_new (ctx, ZMQ_ROUTER);
+    work_collect = zsocket_new (ctx, ZMQ_ROUTER);
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
     

@@ -15,7 +15,7 @@
 void work_hard();
 
 void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req, *que_info;
-volatile char *id;
+char *id;
 
 wQueue *local_queue;
 
@@ -47,26 +47,82 @@ int h_tick (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     return 0;
 }
 
+int h_workrequest (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
+    // get message from send_work
+    // first frame = target
+    // second frame = amount
+    // dequeue amount workitems
+    // send them via send_work
+    // 
+    
+    zmsg_t *msg = zmsg_recv(send_work);
+    zframe_t *target_frame = zmsg_pop(msg);
+    zframe_t *amount_frame = zmsg_pop(msg);
+	char *target, *a;
+	target = zframe_strdup(target_frame);
+	s_sendmore(send_work,target);
+	free(target);
+	
+	a = zframe_strdup(amount_frame);
+	int amount = atoi(a);  
+
+	for(;amount > 0 && !is_empty(local_queue); amount--) {
+		tCell *item = dequeue(local_queue); 
+		wp_sendmore(send_work,item);
+		free(item);
+	}
+	s_send(send_work,"");
+    zframe_destroy(&target_frame);
+    zframe_destroy(&amount_frame);
+    zmsg_destroy(&msg);
+    return 0;
+}
+
 
 int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
-    zmq_msg_t message;
-    zmq_msg_init (&message);
-    zmq_recv (recv_work, &message, 0); 
-    
-    int size = zmq_msg_size (&message);
-    char *data = zmq_msg_data (&message);
-    char *term = malloc(size-20);
-    char *digest = malloc(20);
-    memcpy (term, data+20, size-20);
-    memcpy (digest, data, 20);  
-    
-    printf("W: %s S: %i\n",term,size);      
-    tCell *new = malloc(sizeof(tCell));
-    new->term = term;
-    new->digest = digest;
-    zmq_msg_close (&message);
-    
-    enqueue_cell(local_queue, new);
+	
+	// receive wp message  
+	// first frame contains my name (maybe)?
+	// iterate over frames
+	// deserialize content and enque
+	
+//   zmsg_t *msg = zmsg_recv(recv_work);	
+//   if (msg != NULL) {
+//       int i;
+//       int size = zmsg_size(msg);
+//       for (i = 0; i < size; i++) {
+//           zframe_t *frame = zmsg_pop(msg);
+//           char *string = malloc(21);
+//           string = zframe_strdup(frame);
+//           if(string[0] == 1) put(string); 
+//           hashes++;
+//           forward (hash_publish, string);
+//           free(string);
+//           zframe_destroy(&frame);
+//       }
+//   }
+//   //free(msg);
+//   zmsg_destroy(&msg);
+// 
+//   
+//   zmq_msg_t message;
+//   zmq_msg_init (&message);
+//   zmq_recv (recv_work, &message, 0); 
+//   
+//   int size = zmq_msg_size (&message);
+//   char *data = zmq_msg_data (&message);
+//   char *term = malloc(size-20);
+//   char *digest = malloc(20);
+//   memcpy (term, data+20, size-20);
+//   memcpy (digest, data, 20);  
+//   
+//   printf("W: %s S: %i\n",term,size);      
+//   tCell *new = malloc(sizeof(tCell));
+//   new->term = term;
+//   new->digest = digest;
+//   zmq_msg_close (&message);
+//   
+//   enqueue_cell(local_queue, new);
     return 0;
 }
 
@@ -80,14 +136,15 @@ void work_hard () {
         
         assert(t->term != NULL);
         assert(t->digest != NULL);
-        
+
+     
+        if (!contains_processed(t->digest)) {   
         hit++;
+       int l = atoi(t->term);
+       zmsg_t *msg = zmsg_new ();
+        
+
         int i;
-        
-        int l = atoi(t->term);
-        
-        zmsg_t *msg = zmsg_new ();
-        
         for (i=0;i<N;i++) {
             if (produce_work(l,i)) { 
                 char *r = malloc(10);
@@ -110,11 +167,13 @@ void work_hard () {
         zmsg_send(&msg, send_hashes);
         //		printf("%s done\n",node);
         send_digest_processed(send_hashes, t->digest);
-        
+    }    
         free(t->term);
         free(t->digest);
         free(t);
-    }
+    
+   }
+
     tick(); 
 }
 
@@ -153,15 +212,19 @@ int main (int argc, char *argv []) {
     
     send_hashes = zsocket_new(ctx, ZMQ_PUSH);
     recv_hashes = zsocket_new(ctx, ZMQ_SUB);
-    send_work = zsocket_new(ctx, ZMQ_PUSH);
     send_tick = zsocket_new(ctx, ZMQ_PUSH);
-    recv_work = zsocket_new(ctx, ZMQ_PULL);
     recv_tick = zsocket_new(ctx, ZMQ_PULL);
     
     id_req = zsocket_new(ctx, ZMQ_REQ);
     zsocket_connect(id_req, "tcp://localhost:5005");
     id = getId();
     printf("my name is %s\n", id);
+
+    recv_work = zsocket_new (ctx, ZMQ_DEALER);
+	zsocket_set_identity(recv_work,id);
+
+    send_work = zsocket_new (ctx, ZMQ_DEALER);
+	zsocket_set_identity(send_work,id);
 
     que_info = zsocket_new(ctx, ZMQ_PUSH);
     zsocket_connect(que_info, "tcp://localhost:5006");
@@ -170,7 +233,6 @@ int main (int argc, char *argv []) {
     zsocket_connect(recv_hashes, "tcp://localhost:5000");
     zsocket_connect(send_work, "tcp://localhost:5003");
     zsocket_connect(recv_work, "tcp://localhost:5002");
-    
     
 
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
@@ -195,10 +257,12 @@ int main (int argc, char *argv []) {
     zmq_pollitem_t poller2 = { recv_hashes, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller4 = { recv_work, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { recv_tick, 0, ZMQ_POLLIN };
+    zmq_pollitem_t poller8 = { send_work, 0, ZMQ_POLLIN };
     
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_tick, NULL);
+    zloop_poller (reactor, &poller8, h_workrequest, NULL);
     
     zloop_start  (reactor);
     zloop_destroy (&reactor);

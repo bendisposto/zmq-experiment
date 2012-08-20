@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 
+
+char *int2string(int i) {
+	int len = (int)log10(i) + 2;
+	char *res = malloc(len);
+	sprintf(res,"%i",i);
+	return res;
+}
+
 int send_digest_processed(void *socket, char string[20]) {
 	    int rc;
 	    zmq_msg_t message;

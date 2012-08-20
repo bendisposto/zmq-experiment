@@ -101,6 +101,7 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
         int len = strlen(str + 20);
         char *term = malloc(len + 1);
         memcpy(term, str + 20, len);
+        memcpy(digest, str, 20);
         
         enqueue(local_queue, term, digest);
         
@@ -126,8 +127,11 @@ int h_control(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     return 0;
 }
 
+int countRuns = 0;
+
 void work_hard () {
     if (!is_empty(local_queue)) {
+        countRuns++;
         tCell *t = dequeue(local_queue); 
         
         assert(t->term != NULL);
@@ -187,7 +191,9 @@ void *print_stats(void *arg) {
             if (a[i][20] == 1)
                 processed++;
         }
+
         printf("Hashes: %d / %d\n", processed, count_elements());
+        printf("work hard runs: %d, processed: %d\n", countRuns, hit);
         if (id != NULL) {
             int sze = strlen(id) + ((int)log10(s+1))+3;
             //		printf("S: %d\n",sze);

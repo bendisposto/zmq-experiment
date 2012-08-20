@@ -70,7 +70,7 @@ int forward_wp(void *socket, char *string) {
 int wp_sendmore(zmsg_t *msg, tCell *wp) {
     int len = strlen(wp->term);
     char *content = malloc(20 + len);
-    memcpy(content, wp->digest, len);
+    memcpy(content, wp->digest, 20);
     memcpy(content+20, wp->term, len);
     zmsg_addmem(msg, content, 20 + len);
     return 0;

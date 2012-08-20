@@ -135,11 +135,11 @@ void *print_stats(void *arg) {
            if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
             } 
         }
+        sleep(5);
         if (checkShutdown()) {
             // TODO: send "TERM" 
-            s_send(send_ctrl, "TERM");
+           // s_send(send_ctrl, "TERM");
         }
-        sleep(5);
     }
     return 0;
 }

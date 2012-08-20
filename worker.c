@@ -273,7 +273,7 @@ int main (int argc, char *argv []) {
     
     free(id);
     
-    
+    zctx_destroy(&ctx);
     
     //	enqueue(root,digest);
     // 

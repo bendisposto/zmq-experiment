@@ -21,7 +21,7 @@ void *hash_publish,
 *hash_collect, 
 *work_publish, 
 *work_collect,
-*id_response, *queuesizes;
+*id_response, *queuesizes, *send_ctrl;
 
 int queues[N_WORKERS]; 
 
@@ -108,6 +108,21 @@ void transfer_work(int from, int to, int amount) {
     free(samount);
 }
 
+int checkShutdown() {
+    if (work == 0)
+        return 0;
+    
+    int shutdown = 1;
+    int i;
+    for (i = 0; i < N_WORKERS; i++) {
+        if (queues[i] > 0) {
+            shutdown = 0;
+            break;
+        }
+    }
+    return shutdown;
+}
+
 void *print_stats(void *arg) {
     while(1) {
         printf("Workpackages: %i/%i\n",work,enq);
@@ -119,6 +134,10 @@ void *print_stats(void *arg) {
            if (queues[i] == 0) need = i;
            if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
             } 
+        }
+        if (checkShutdown()) {
+            // TODO: send "TERM" 
+            s_send(send_ctrl, "TERM");
         }
         sleep(5);
     }
@@ -146,13 +165,15 @@ int main (void)
     work_collect = zsocket_new (ctx, ZMQ_ROUTER);
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
-    
+    send_ctrl = zsocket_new (ctx, ZMQ_PUB);
+
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");
     zsocket_bind (work_publish, "tcp://*:5002");
     zsocket_bind (work_collect, "tcp://*:5003");
     zsocket_bind (id_response, "tcp://*:5005");
     zsocket_bind (queuesizes, "tcp://*:5006");
+    zsocket_bind (send_ctrl, "tcp://*:5007");
     
     printf("le reactor\n");
     zloop_t *reactor = zloop_new ();

@@ -16,6 +16,7 @@ void work_hard();
 
 void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req, *que_info;
 char *id;
+zloop_t *reactor;
 
 wQueue *local_queue;
 
@@ -113,6 +114,18 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     return 0;
 }
 
+int h_control(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
+    zmsg_t *msg = zmsg_recv(recv_ctrl);
+    char *str = zmsg_popstr (msg);
+    zmsg_destroy(&msg);
+    if (strcmp(str, "TERM") == 0) {
+        free(str);
+        return -1;
+    }
+    free(str);
+    return 0;
+}
+
 void work_hard () {
     if (!is_empty(local_queue)) {
         tCell *t = dequeue(local_queue); 
@@ -203,6 +216,7 @@ int main (int argc, char *argv []) {
     recv_hashes = zsocket_new(ctx, ZMQ_SUB);
     send_tick = zsocket_new(ctx, ZMQ_PUSH);
     recv_tick = zsocket_new(ctx, ZMQ_PULL);
+    recv_ctrl = zsocket_new(ctx, ZMQ_SUB);
     
     id_req = zsocket_new(ctx, ZMQ_REQ);
     zsocket_connect(id_req, "tcp://localhost:5005");
@@ -222,7 +236,7 @@ int main (int argc, char *argv []) {
     zsocket_connect(recv_hashes, "tcp://localhost:5000");
     zsocket_connect(send_work, "tcp://localhost:5003");
     zsocket_connect(recv_work, "tcp://localhost:5002");
-    
+    zsocket_connect(recv_ctrl, "tcp://localhost:5007");
     
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
     char prot[22]; 
@@ -231,27 +245,28 @@ int main (int argc, char *argv []) {
     
     zsocket_connect(send_tick, prot);
     
-    //	recv_ctrl = zmq_socket (context, ZMQ_REP);
-    //	int port = zmq_bind(recv_ctrl, "tcp://*:4567");
     
     //	printf("port: %i\n",port);
     
     
     char *filter = "";
+    zmq_setsockopt (recv_ctrl, ZMQ_SUBSCRIBE, filter, strlen (filter));
     zmq_setsockopt (recv_hashes, ZMQ_SUBSCRIBE, filter, strlen (filter));
     
     printf("starting\n");
     printf("le reacteur\n");
-    zloop_t *reactor = zloop_new ();
+    reactor = zloop_new ();
     zmq_pollitem_t poller2 = { recv_hashes, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller4 = { recv_work, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { recv_tick, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller8 = { send_work, 0, ZMQ_POLLIN };
+    zmq_pollitem_t poller20 = { recv_ctrl, 0, ZMQ_POLLIN };
     
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_tick, NULL);
     zloop_poller (reactor, &poller8, h_workrequest, NULL);
+    zloop_poller (reactor, &poller20, h_control, NULL);
     
     zloop_start  (reactor);
     zloop_destroy (&reactor);

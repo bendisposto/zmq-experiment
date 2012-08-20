@@ -14,6 +14,7 @@
 #define N_WORKERS   16
 
 int hashes = 0, work=0, enq = 0;
+int global_shutdown = 0;
 
 volatile int next_worker_id = FIRST_WORKER;
 
@@ -21,9 +22,15 @@ void *hash_publish,
 *hash_collect, 
 *work_publish, 
 *work_collect,
-*id_response, *queuesizes, *send_ctrl;
+*id_response,
+*queuesizes,
+*send_ctrl,
+*recv_ctrl;
 
 int queues[N_WORKERS]; 
+
+int checkShutdown();
+
 
 int h_hash (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(hash_collect);	
@@ -40,8 +47,11 @@ int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     int qs;
     sscanf(string,"%i %i",&worker,&qs);
     //	printf("Worker %s: %s\n",worker,qs);
-    queues[worker] = qs;	
+    queues[worker] = qs;
     free(string);
+    global_shutdown = checkShutdown();
+    if (global_shutdown)
+        return -1;
     return 0;
 }
 
@@ -113,14 +123,18 @@ int checkShutdown() {
         return 0;
     
     int shutdown = 1;
+    int started = 0;
     int i;
     for (i = 0; i < N_WORKERS; i++) {
+        if (queues[i] == 0) {
+            started = 1;
+        }
         if (queues[i] > 0) {
             shutdown = 0;
             break;
         }
     }
-    return shutdown;
+    return shutdown && started;
 }
 
 void *print_stats(void *arg) {
@@ -131,14 +145,14 @@ void *print_stats(void *arg) {
             int need = 0, has = 0;
             int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
                 if (queues[i]>queues[has]) has = i;
-           if (queues[i] == 0) need = i;
+           if (queues[i] == 0 || queues[i] == -2) need = i;
            if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
             } 
         }
         sleep(1);
-        if (checkShutdown()) {
-            // TODO: send "TERM" 
-           // s_send(send_ctrl, "TERM");
+        global_shutdown = checkShutdown();
+        if (global_shutdown) {
+            s_send(send_ctrl, "TERM");
         }
     }
     return 0;
@@ -166,6 +180,7 @@ int main (void)
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
     send_ctrl = zsocket_new (ctx, ZMQ_PUB);
+    recv_ctrl = zsocket_new(ctx, ZMQ_SUB);
 
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");
@@ -181,12 +196,13 @@ int main (void)
     zmq_pollitem_t poller4 = { work_collect, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { id_response, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller8 = { queuesizes, 0, ZMQ_POLLIN };
-    
+ 
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_id, NULL);
     zloop_poller (reactor, &poller8, h_queues, NULL);
     zloop_start  (reactor);
+    sleep(1);
     zloop_destroy (&reactor);
     
     zctx_destroy (&ctx);

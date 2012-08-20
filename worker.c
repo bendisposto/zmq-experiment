@@ -167,7 +167,7 @@ void work_hard () {
             zmsg_send(&msg, send_hashes);
             //		printf("%s done\n",node);
             send_digest_processed(send_hashes, t->digest);
-			s_sleep(20);
+            s_sleep(20);
         }    
         free(t->term);
         free(t->digest);
@@ -196,12 +196,23 @@ void *print_stats(void *arg) {
 //        printf("Hashes: %d / %d\n", processed, count_elements());
 //        printf("work hard runs: %d, processed: %d\n", countRuns, hit);
         if (id != NULL) {
-            int sze = strlen(id) + ((int)log10(s+1))+3;
-            //		printf("S: %d\n",sze);
-            char *msg = malloc(sze);
-            sprintf(msg,"%s %d",id,s);
-            s_send(que_info, msg);
-            free(msg);
+
+            if (countRuns > 0) {
+                int sze = strlen(id) + ((int)log10(s+1))+3;
+                //		printf("S: %d\n",sze);
+                char *msg = malloc(sze);
+                sprintf(msg,"%s %d",id,s);
+                s_send(que_info, msg);
+                free(msg);
+            }
+            else {
+                int sze = strlen(id) + 4;
+                //              printf("S: %d\n",sze);
+                char *msg = malloc(sze);
+                sprintf(msg,"%s %d", id, -2);
+                s_send(que_info, msg);
+                free(msg);
+            }
         }
         sleep(1);
     }

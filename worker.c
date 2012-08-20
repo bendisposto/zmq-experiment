@@ -114,7 +114,7 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 }
 
 void work_hard () {
-    if (!is_empty(local_queue)) {     
+    if (!is_empty(local_queue)) {
         tCell *t = dequeue(local_queue); 
         
         assert(t->term != NULL);
@@ -168,7 +168,13 @@ char *getId() {
 void *print_stats(void *arg) {
     while(1) {
         int s = q_size(local_queue);
-        //     printf("Queuesize %i %s\n",s,id);
+        printf("Queuesize %i\n", s);
+        int i, processed = 0;
+        for (i = 0; i < HASHSIZE; i++) {
+            if (a[i][20] == 1)
+                processed++;
+        }
+        printf("Hashes: %d / %d\n", processed, count_elements());
         if (id != NULL) {
             int sze = strlen(id) + ((int)log10(s+1))+3;
             //		printf("S: %d\n",sze);

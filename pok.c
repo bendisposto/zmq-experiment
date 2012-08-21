@@ -105,7 +105,7 @@ char *get_root(int argc, char *argv [])
     /*
      * Loop through all the solutions.
      */
-    char *root;
+    char *root = NULL;
     while (SP_next_solution(goal)==SP_SUCCESS)
     {
         printf("Root: ");

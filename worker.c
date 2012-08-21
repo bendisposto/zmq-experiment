@@ -180,7 +180,15 @@ void work_hard () {
 
 char *getId() {
     s_send(id_req, "hello");
-    return s_recv(id_req);
+    zmsg_t *msg = zmsg_recv(id_req);
+    zframe_t *idframe = zmsg_pop(msg);
+    zframe_t *modelframe = zmsg_pop(msg);
+    char *id = zframe_strdup(idframe);
+    char *model = zframe_strdup(modelframe);
+    printf("Loading: %s\n", model);
+    sleep(2); // pretend to load something
+    free(model);
+    return id;
 }
 
 void *print_stats(void *arg) {

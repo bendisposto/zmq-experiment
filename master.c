@@ -12,6 +12,7 @@
 #define MINIMUM_SIZE  200
 #define FIRST_WORKER	2
 #define N_WORKERS   16
+#define MODEL   "Hi, I'm a model."
 
 int hashes = 0, work=0, enq = 0;
 
@@ -79,11 +80,14 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
         char *id = malloc(len + 1);
         sprintf(id, "%d", next_worker_id);
         queues[next_worker_id] = NOT_INITIALIZED;
-        zmq_msg_t message;
-        zmq_msg_init_size (&message, len + 1);
-        memcpy (zmq_msg_data (&message), id, len + 1);
-        zmq_send (id_response, &message, 0);
-        zmq_msg_close (&message);
+        
+        
+        zmsg_t *msg =  zmsg_new();
+        zmsg_addmem(msg, id, strlen(id) + 1);
+        zmsg_addmem(msg, MODEL, strlen(MODEL) + 1);
+        zmsg_send(&msg, id_response);
+        zmsg_destroy(&msg);
+        
         free(id);
         next_worker_id++;
     }
@@ -174,7 +178,6 @@ int main (void)
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
     send_ctrl = zsocket_new (ctx, ZMQ_PUB);
-    recv_ctrl = zsocket_new(ctx, ZMQ_SUB);
 
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");

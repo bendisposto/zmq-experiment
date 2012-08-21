@@ -145,11 +145,14 @@ void *print_stats(void *arg) {
         print_queuesizes();
         if (next_worker_id - FIRST_WORKER > 1) {
             int need = 0, has = 0;
-            int i; for(i = FIRST_WORKER; i<next_worker_id; i++) {
+            int i;
+            for(i = FIRST_WORKER; i<next_worker_id; i++) {
                 if (queues[i]>queues[has]) has = i;
-           if (queues[i] == 0 || queues[i] == -2) need = i;
-           if (queues[has] > MINIMUM_SIZE*2 && need > 0) { transfer_work(has,need,queues[has]/2); break; }
+                if (queues[i] == 0 || queues[i] == -2) need = i;
             } 
+            if (queues[has] > MINIMUM_SIZE*2 && need > 0) { 
+                transfer_work(has,need,queues[has]/2);
+            }
         }
         sleep(1);
     }
@@ -178,7 +181,7 @@ int main (void)
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
     send_ctrl = zsocket_new (ctx, ZMQ_PUB);
-
+    
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");
     zsocket_bind (work_publish, "tcp://*:5002");
@@ -193,7 +196,7 @@ int main (void)
     zmq_pollitem_t poller4 = { work_collect, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { id_response, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller8 = { queuesizes, 0, ZMQ_POLLIN };
- 
+    
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_id, NULL);

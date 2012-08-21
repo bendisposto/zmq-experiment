@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <sicstus/sicstus.h>
 
 void work_hard();
 
@@ -187,6 +188,8 @@ void work_hard () {
     tick(); 
 }
 
+void load_model(char *model);
+
 char *getId() {
     s_send(id_req, "hello");
     zmsg_t *msg = zmsg_recv(id_req);
@@ -194,9 +197,13 @@ char *getId() {
     zframe_t *modelframe = zmsg_pop(msg);
     char *id = zframe_strdup(idframe);
     char *model = zframe_strdup(modelframe);
-    printf("Loading: %s\n", model);
-    sleep(2); // pretend to load something
+    
+    load_model(model);
+    
     free(model);
+    zframe_destroy(&idframe);
+    zframe_destroy(&modelframe);
+    zmsg_destroy(&msg);
     return id;
 }
 
@@ -239,7 +246,7 @@ void *print_stats(void *arg) {
     return 0;
 }
 
-int main (int argc, char *argv []) {
+int user_main (int argc, char *argv []) {
     init_graph();
     init_hashmap();
     local_queue = init_queue();
@@ -312,16 +319,50 @@ int main (int argc, char *argv []) {
     
     zctx_destroy(&ctx);
     
-    //	enqueue(root,digest);
-    // 
-    
-    /* while (1) {
-     *        work_hard();
-     *        count++;
-}
-running = 0;
-printf("%d  %d\n",count,count_elements());
-printf("Hit: %d Cache: %d\n",hit,cache);
-*/
     return 0;
+}
+
+void load_model(char *model) {
+    int rval;
+    SP_pred_ref pred;
+    SP_qid goal;
+    SP_term_ref to;
+    
+    /* Initialize Prolog engine. The third arg to SP_initialize is
+     *        an option block and can be NULL, for default options. */
+    if (SP_FAILURE == SP_initialize(0, NULL, NULL)) {
+        fprintf(stderr, "SP_initialize failed: %s\n",
+                SP_error_message(SP_errno));
+        exit(1);
+    }
+    
+    rval = SP_restore("worker.sav");
+    
+    if (rval == SP_ERROR || rval == SP_FAILURE) {
+        fprintf(stderr, "Could not restore \"worker.sav\".\n");
+        exit(1);
+    }
+    
+    /* Look up load/1. */
+    if (!(pred = SP_predicate("load",1,"user"))) {
+        fprintf(stderr, "Could not find load/1.\n");
+        exit(1);
+    }
+    
+    SP_put_string(to = SP_new_term_ref(), model);
+    
+    /* Open the query. In a development system, the query would look like:
+     * | ?- load(model).
+     */
+    if (!(goal = SP_open_query(pred,to))) {
+        fprintf(stderr, "Failed to open query.\n");
+        exit(1);
+    }
+    
+    /* Execute query */
+    int suc = SP_next_solution(goal);
+    
+    assert(suc == SP_SUCCESS);
+    
+    SP_close_query(goal);
 }

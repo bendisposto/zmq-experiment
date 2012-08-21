@@ -9,11 +9,15 @@ master: master.c mqhelper.c zhelpers.h
 worker: worker.c hashmap.c mqhelper.c queue.c graph.c sha.c mqhelper.c zhelpers.h
 	gcc ${MODE_R} -o worker worker.c ${LIBRARIES} ${WARN}
 
-pok: pok.c root.sav root.pl sha.c graph.c mqhelper.c zhelpers.h
+pok: savfile pok.c sha.c graph.c mqhelper.c zhelpers.h
 #	gcc ${MODE_R} -o pok pok.c ${LIBRARIES} ${WARN}
 	spld --static pok.c -o pok -lzmq -lczmq --cflag=-Wall,-Wno-unused-function
 
-all: master worker pok
+all: master worker pok savfile
+
+savfile: root.pl
+	sicstus -l root.pl --goal "save_program('root.sav'),halt."
+
 	
 clean:
-	rm -f master worker pok
+	rm -f master worker pok root.sav

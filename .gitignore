@@ -7,3 +7,6 @@ hash
 out
 *.dSYM/
 pok
+*.sav
+*.c~
+*.pl~

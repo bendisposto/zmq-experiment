@@ -14,7 +14,6 @@
 #define N_WORKERS   16
 
 int hashes = 0, work=0, enq = 0;
-int global_shutdown = 0;
 
 volatile int next_worker_id = FIRST_WORKER;
 
@@ -49,8 +48,7 @@ int h_queues (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     //	printf("Worker %s: %s\n",worker,qs);
     queues[worker] = qs;
     free(string);
-    global_shutdown = checkShutdown();
-    if (global_shutdown)
+    if (checkShutdown())
         return -1;
     return 0;
 }
@@ -150,10 +148,6 @@ void *print_stats(void *arg) {
             } 
         }
         sleep(1);
-        global_shutdown = checkShutdown();
-        if (global_shutdown) {
-            s_send(send_ctrl, "TERM");
-        }
     }
     return 0;
 }
@@ -202,6 +196,7 @@ int main (void)
     zloop_poller (reactor, &poller6, h_id, NULL);
     zloop_poller (reactor, &poller8, h_queues, NULL);
     zloop_start  (reactor);
+    s_send(send_ctrl, "TERM");
     sleep(1);
     zloop_destroy (&reactor);
     

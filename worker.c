@@ -130,6 +130,14 @@ int h_control(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 
 int countRuns = 0;
 
+int spinwait(int n) {
+	int j=0;
+	int i;
+	for (i=0;i<100000*n;i++) { j = j + i - rand(); }
+	return j;
+}
+
+
 void work_hard () {
     if (!is_empty(local_queue)) {
         countRuns++;
@@ -168,7 +176,8 @@ void work_hard () {
             zmsg_send(&msg, send_hashes);
             //		printf("%s done\n",node);
             send_digest_processed(send_hashes, t->digest);
-            s_sleep(20);
+            //s_sleep(10);
+			spinwait(10);
         }    
         free(t->term);
         free(t->digest);
@@ -197,6 +206,8 @@ char *getId() {
     zmsg_destroy(&msg);
     return id;
 }
+
+
 
 void *print_stats(void *arg) {
     while(1) {

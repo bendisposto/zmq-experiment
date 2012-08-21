@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include "mqhelper.c"
 #include <czmq.h>
+#include <sicstus/sicstus.h>
+
 
 void *context, *front, *back;
 char *get_root(int argc, char *argv []);
@@ -57,10 +59,6 @@ int user_main (int argc, char *argv []) {
     
     return 0;
 }
-
-
-#include <stdio.h>
-#include <sicstus/sicstus.h>
 
 char *get_root(int argc, char *argv [])
 {

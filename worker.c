@@ -187,7 +187,7 @@ void *print_stats(void *arg) {
     while(1) {
         int s = q_size(local_queue);
        // printf("Queuesize %i\n", s);
-        int i, processed = 0;
+ //       int i, processed = 0;
  //       for (i = 0; i < HASHSIZE; i++) {
    //         if (a[i][20] == 1)
      //           processed++;

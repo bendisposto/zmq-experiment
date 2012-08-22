@@ -163,32 +163,40 @@ void work_hard () {
                 tail = SP_new_term_ref(),
                 head = SP_new_term_ref();
                 
-            
             if (SP_get_list(list1, head, tail)) {
                 // assert: list1 is not empty
-                const char *succ = NULL;
-                SP_put_term(tail,list2);
+                zmsg_t *infos = zmsg_new();
+                zmsg_addmem(infos, t->digest, 20);
+                SP_put_term(tail,list1);
                 while (SP_get_list(tail,head,tail)) {
-                    SP_get_string(head, &succ);
-                    assert(succ != NULL);
-                    // printf("%s ",succ);
-                    char *r = malloc(strlen(succ) + 1);
-                    memcpy(r, succ, strlen(succ) + 1);
-                    char *d = malloc(20);
-                    sha1(r,d);
-                    if (!contains(d)) { 
-                        put_local(d);
-                        enqueue(local_queue, r, d);
-                        add_queued_digest(msg, d);
-                    }
-                    else {
-                        free(r);
-                        free(d);
-                    }
+                    const char *str;
+                    SP_get_string(head, &str);
+                    zmsg_addmem(infos, str, strlen(str) + 1);
                 }
-                
+                zmsg_send(&infos, send_result);
+                zmsg_destroy(&infos);
             }
-         
+            
+            const char *succ = NULL;
+            SP_put_term(tail,list2);
+            while (SP_get_list(tail,head,tail)) {
+                SP_get_string(head, &succ);
+                assert(succ != NULL);
+                // printf("%s ",succ);
+                char *r = malloc(strlen(succ) + 1);
+                memcpy(r, succ, strlen(succ) + 1);
+                char *d = malloc(20);
+                sha1(r,d);
+                if (!contains(d)) { 
+                    put_local(d);
+                    enqueue(local_queue, r, d);
+                    add_queued_digest(msg, d);
+                }
+                else {
+                    free(r);
+                    free(d);
+                }
+            }
             
             zmsg_send(&msg, send_hashes);
             //		printf("%s done\n",node);

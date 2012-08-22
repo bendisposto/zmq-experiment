@@ -94,6 +94,14 @@ int h_id (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     return 0;
 }
 
+int h_results (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
+    zmsg_t *msg = zmsg_recv(recv_result);
+    // TODO: handle results
+    printf("I got a message and it's %d frames long.\n", (int) zmsg_size(msg));
+    zmsg_destroy(&msg);
+    return 0;
+}
+
 void print_queuesizes() {
     int i;
     for(i = 2; i < N_WORKERS; i++) {
@@ -197,16 +205,15 @@ int main (int arg)
     zmq_pollitem_t poller4 = { work_collect, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller6 = { id_response, 0, ZMQ_POLLIN };
     zmq_pollitem_t poller8 = { queuesizes, 0, ZMQ_POLLIN };
+    zmq_pollitem_t poller20 = { recv_result, 0, ZMQ_POLLIN };
     
     zloop_poller (reactor, &poller2, h_hash, NULL);
     zloop_poller (reactor, &poller4, h_work, NULL);
     zloop_poller (reactor, &poller6, h_id, NULL);
     zloop_poller (reactor, &poller8, h_queues, NULL);
+    zloop_poller (reactor, &poller20, h_results, NULL);
     zloop_start  (reactor);
     s_send(send_ctrl, "TERM");
-    
-    // pull results
-    // maybe via looping a blocking receive call
     
     sleep(1);
     zloop_destroy (&reactor);

@@ -15,7 +15,7 @@
 
 void work_hard();
 
-void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_ctrl, *recv_tick, *send_tick, *id_req, *que_info;
+void  *recv_hashes, *send_hashes, *recv_work, *send_work, *recv_ctrl, *send_result, *recv_tick, *send_tick, *id_req, *que_info;
 char *id;
 zloop_t *reactor;
 
@@ -130,6 +130,12 @@ int h_control(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 
 int countRuns = 0;
 
+
+char *check_state(char *term) {
+    // call le prolog
+    return NULL;
+}
+
 void work_hard () {
     if (!is_empty(local_queue)) {
         countRuns++;
@@ -144,6 +150,8 @@ void work_hard () {
             int l = atoi(t->term);
             zmsg_t *msg = zmsg_new ();
             
+            
+            char *x = check_state(t->term);
             
             int i;
             for (i=0;i<N;i++) {
@@ -250,6 +258,7 @@ int main (int arg) {
     send_tick = zsocket_new(ctx, ZMQ_PUSH);
     recv_tick = zsocket_new(ctx, ZMQ_PULL);
     recv_ctrl = zsocket_new(ctx, ZMQ_SUB);
+    send_result = zsocket_new(ctx, ZMQ_PUSH);
     
     id_req = zsocket_new(ctx, ZMQ_REQ);
     zsocket_connect(id_req, "tcp://localhost:5005");
@@ -270,6 +279,7 @@ int main (int arg) {
     zsocket_connect(send_work, "tcp://localhost:5003");
     zsocket_connect(recv_work, "tcp://localhost:5002");
     zsocket_connect(recv_ctrl, "tcp://localhost:5007");
+    zsocket_connect(send_result, "tcp://localhost:5008");
     
     int tickport = zsocket_bind(recv_tick, "tcp://*:*");
     char prot[22]; 
@@ -303,6 +313,8 @@ int main (int arg) {
     
     zloop_start  (reactor);
     zloop_destroy (&reactor);
+    
+    // send results via send_result socket
     
     free(id);
     

@@ -24,7 +24,7 @@ void *hash_publish,
 *id_response,
 *queuesizes,
 *send_ctrl,
-*recv_ctrl;
+*recv_result;
 
 int queues[N_WORKERS]; 
 
@@ -180,6 +180,7 @@ int main (int arg)
     id_response = zsocket_new (ctx, ZMQ_REP);
     queuesizes = zsocket_new (ctx, ZMQ_PULL);
     send_ctrl = zsocket_new (ctx, ZMQ_PUB);
+    recv_result = zsocket_new (ctx, ZMQ_PULL);
     
     zsocket_bind (hash_publish, "tcp://*:5000");
     zsocket_bind (hash_collect, "tcp://*:5001");
@@ -188,6 +189,7 @@ int main (int arg)
     zsocket_bind (id_response, "tcp://*:5005");
     zsocket_bind (queuesizes, "tcp://*:5006");
     zsocket_bind (send_ctrl, "tcp://*:5007");
+    zsocket_bind (recv_result, "tcp://*:5008");
     
     printf("le reactor\n");
     zloop_t *reactor = zloop_new ();
@@ -202,6 +204,10 @@ int main (int arg)
     zloop_poller (reactor, &poller8, h_queues, NULL);
     zloop_start  (reactor);
     s_send(send_ctrl, "TERM");
+    
+    // pull results
+    // maybe via looping a blocking receive call
+    
     sleep(1);
     zloop_destroy (&reactor);
     

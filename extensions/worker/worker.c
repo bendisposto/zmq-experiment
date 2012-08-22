@@ -93,7 +93,7 @@ int h_work (zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
     zmsg_t *msg = zmsg_recv(recv_work);
     
     int len = zmsg_size(msg);
-
+    
     int i;
     for (i = 0; i < len; i++) {
         zframe_t *frame = zmsg_pop (msg);
@@ -131,9 +131,16 @@ int h_control(zloop_t *loop, zmq_pollitem_t *poller, void *arg) {
 int countRuns = 0;
 
 
-char *check_state(char *term) {
-    // call le prolog
-    return NULL;
+void check_state(char *term, SP_term_ref l1, SP_term_ref l2) {
+            SP_pred_ref pred = SP_predicate("zmq_check",3,"user");
+            SP_term_ref val;
+            val = SP_new_term_ref(); 
+            SP_put_string(val, term);
+            SP_put_variable(l1);
+            SP_put_variable(l2);
+            
+            int status = SP_query(pred, val, l1, l2);
+            assert(status == SP_SUCCESS);
 }
 
 void work_hard () {
@@ -147,51 +154,41 @@ void work_hard () {
         
         if (!contains_processed(t->digest)) {   
             hit++;
-            int l = atoi(t->term);
-            zmsg_t *msg = zmsg_new ();
-            
-            
-            SP_term_ref result = check_state(t->term);
-              
-// check_state calls Prolog predicate zmq_check(term,L1,L2)
-// Prolog returns two lists L1,L2
-// if L1 is not empty, send all list elements to master 
-// foreach element i in L2:
-// 			char *r = malloc(10);
-//            sprintf(r,"%d",i);
-//            char *d = malloc(20);
-//            sha1(r,d);
-//            if (!contains(d)) { 
-//                put_local(d);
-//                enqueue(local_queue, r, d);
-//                add_queued_digest(msg, d);
-//                //send_digest_queued(send_hashes,d);
-//            }
-//            else {
-//                free(r);
-//                free(d);
-//            }
-//
 
-            int i;
-            for (i=0;i<N;i++) {
-                if (produce_work(l,i)) { 
-                    char *r = malloc(10);
-                    sprintf(r,"%d",i);
+            SP_term_ref list1 = SP_new_term_ref(), list2 = SP_new_term_ref();
+            check_state(t->term, list1, list2);
+            
+            zmsg_t *msg = zmsg_new ();
+            SP_term_ref
+                tail = SP_new_term_ref(),
+                head = SP_new_term_ref();
+                
+            
+            if (SP_get_list(list1, head, tail)) {
+                // assert: list1 is not empty
+                const char *succ = NULL;
+                SP_put_term(tail,list2);
+                while (SP_get_list(tail,head,tail)) {
+                    SP_get_string(head, &succ);
+                    assert(succ != NULL);
+                    // printf("%s ",succ);
+                    char *r = malloc(strlen(succ) + 1);
+                    memcpy(r, succ, strlen(succ) + 1);
                     char *d = malloc(20);
                     sha1(r,d);
                     if (!contains(d)) { 
                         put_local(d);
                         enqueue(local_queue, r, d);
                         add_queued_digest(msg, d);
-                        //send_digest_queued(send_hashes,d);
                     }
                     else {
                         free(r);
                         free(d);
                     }
-                }		
+                }
+                
             }
+         
             
             zmsg_send(&msg, send_hashes);
             //		printf("%s done\n",node);
@@ -229,17 +226,17 @@ char *getId() {
 void *print_stats(void *arg) {
     while(1) {
         int s = q_size(local_queue);
-       // printf("Queuesize %i\n", s);
- //       int i, processed = 0;
- //       for (i = 0; i < HASHSIZE; i++) {
-   //         if (a[i][20] == 1)
-     //           processed++;
-       // }
-
-//        printf("Hashes: %d / %d\n", processed, count_elements());
-//        printf("work hard runs: %d, processed: %d\n", countRuns, hit);
+        // printf("Queuesize %i\n", s);
+        //       int i, processed = 0;
+        //       for (i = 0; i < HASHSIZE; i++) {
+            //         if (a[i][20] == 1)
+        //           processed++;
+        // }
+        
+        //        printf("Hashes: %d / %d\n", processed, count_elements());
+        //        printf("work hard runs: %d, processed: %d\n", countRuns, hit);
         if (id != NULL) {
-
+            
             if (countRuns > 0) {
                 int sze = strlen(id) + ((int)log10(s+1))+3;
                 //		printf("S: %d\n",sze);
@@ -333,7 +330,7 @@ int main (int arg) {
     
     zloop_start  (reactor);
     zloop_destroy (&reactor);
-    
+    printf("Count: %d\n", countRuns);
     // send results via send_result socket
     
     free(id);

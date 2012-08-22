@@ -151,8 +151,28 @@ void work_hard () {
             zmsg_t *msg = zmsg_new ();
             
             
-            char *x = check_state(t->term);
-            
+            SP_term_ref result = check_state(t->term);
+              
+// check_state calls Prolog predicate zmq_check(term,L1,L2)
+// Prolog returns two lists L1,L2
+// if L1 is not empty, send all list elements to master 
+// foreach element i in L2:
+// 			char *r = malloc(10);
+//            sprintf(r,"%d",i);
+//            char *d = malloc(20);
+//            sha1(r,d);
+//            if (!contains(d)) { 
+//                put_local(d);
+//                enqueue(local_queue, r, d);
+//                add_queued_digest(msg, d);
+//                //send_digest_queued(send_hashes,d);
+//            }
+//            else {
+//                free(r);
+//                free(d);
+//            }
+//
+
             int i;
             for (i=0;i<N;i++) {
                 if (produce_work(l,i)) { 
